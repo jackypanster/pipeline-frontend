@@ -30,6 +30,20 @@ Each command body (~20 lines): `git pull --rebase → read current.json + md →
 roles.yaml → invoke skill → write your stage's write-set + append handoff to journal.md → commit
 (one) → push → print handoff`.
 
+## Core principle: stages are decoupled — each runs cold, the handoff is the only bridge
+
+Any stage may be run by a **different agent on a different LLM in a fresh conversation with zero
+shared memory**. The pipeline is explicitly built for this: there is no shared session, no DB, no
+scheduler. The **only** thing that crosses a stage boundary is the **handoff block** — persisted to
+`journal.md` (so it survives chat death) and printed for the operator to relay. Therefore a stage's
+output must be a **complete, self-contained briefing** for a cold node: it has only `git pull` +
+`CONTRACT.md` + your handoff. Point at artifact paths (git is the bus — never paste bodies), give
+concrete numbered steps, name feature-specific gotchas, and err toward MORE next-step detail, not
+less — a thin handoff makes a cold frontier bot guess wrong. `journal.md` (append-only) is the
+source of truth: its tail entry IS the live position; `current.json` is only a fast cache. The
+resume protocol for any cold start is `git pull --rebase` → read the journal tail → its handoff is
+your briefing.
+
 ## Commands (MVP — 3 stages)
 
 | command | delegates to (skill) | in → out |

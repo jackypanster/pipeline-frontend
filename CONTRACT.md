@@ -147,8 +147,11 @@ not silently re-authored; the visual gate + human confirm judge adherence. **Bot
 ## Handoff block — a self-contained briefing for a COLD next node
 
 **The next node is a FRESH session — possibly a different agent on a different frontier LLM — with
-ZERO prior context.** Point at artifacts (git is the bus — never paste bodies), give **concrete
-numbered steps**, and name **feature-specific gotchas**.
+ZERO prior context.** It has only: this repo (via `git pull`), `CONTRACT.md`, and your handoff. So
+the handoff must carry **everything it needs to ACT, not a one-liner.** Point at artifact paths (git
+is the bus — never paste bodies), give **concrete numbered steps**, and name **feature-specific
+gotchas.** A cold frontier bot with a thin handoff guesses wrong — err toward MORE next-step detail,
+not less. Chat-friendly: plain text, short lines, no tables.
 
 ```text
 >>> NEXT
