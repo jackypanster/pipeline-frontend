@@ -1,0 +1,13 @@
+# roles.yaml — per-target-repo skill bindings (copy this into the target repo's .pipeline/)
+# Each command resolves its slot to a skill NAME here. Point a slot at a better skill any time —
+# the contract is unchanged. The runtime is ANY capable agent you paste the command into; the
+# pipeline is framework-, machine- and LLM-agnostic — not bound to any tool, framework, agent or LLM.
+# Per-stage model requirement: design/review want a frontier SOTA model; impl tolerates a capable local model.
+
+design:  ui-ux-pro-max             # generates a complete design system (palette/type/spacing/components) from a product brief
+impl:    <autonomous-coding-skill> # REQUIRED: set to the real installed name of your runtime's autonomous think→code→check skill
+review:  design                    # the local design/ui skill's screenshot-iteration mode (visual review vs frozen references)
+
+# Extend with new verbs as needed, e.g.:
+# task:  think                     # decompose a large design into atomic impl cards (deferred — MVP freezes one unit per feature)
+# hunt:  hunt                      # root-cause a blocked card (deferred until a real impl deadlock appears)
