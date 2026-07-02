@@ -40,8 +40,8 @@ accordingly.
 5. **Fail / budget exhausted** ⇒ on `main`: `attempts++`, decide by retry budget BEFORE committing:
    - **`attempts < 3`** ⇒ `stage` back to the pre-impl state, journal `status=failed`, next =
      **fp-impl** (informed retry — the `## Attempt N` note carries the failure context).
-   - **`attempts >= 3`** ⇒ journal `status=blocked`, STOP and surface to the human (MVP has no
-     `fp-hunt` yet — add it when a real deadlock appears).
+   - **`attempts >= 3`** ⇒ journal `status=blocked`, STOP and surface to the human (no `fp-hunt`
+     stage in this MVP).
    Commit the `current.json` + journal update to `main` in ONE commit, then print the handoff.
 
 ## Hard rules

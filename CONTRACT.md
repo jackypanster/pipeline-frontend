@@ -1,27 +1,25 @@
 # CONTRACT.md — the frozen frontend pipeline protocol
 
 Single source of truth for every `fp-*` skill. Commands carry **no logic of their own** —
-they follow this. (See [DESIGN.md](DESIGN.md) for rationale and how this differs from the
-backend [`jackypanster/pipeline`](https://github.com/jackypanster/pipeline).)
+they follow this. See [DESIGN.md](DESIGN.md) for the design contract (core principle · commands ·
+borrowed/rejected · constraints · open items).
 
-## What this is — design-driven, not test-driven
+## What this freezes — the design system, not a red test
 
-The backend pipeline freezes a **red test** (`spec-paths`) and lets `pipeline-impl` make it
-green: correctness is a deterministic pass/fail. **Frontend correctness is visual and partly
-subjective** — no test can judge "does the rendered UI match the intended aesthetic." So this
-pipeline freezes the **design system** (`design-paths`: `DESIGN.md` + tokens + reference
-screenshots) instead, and splits the gate into two halves:
+Frontend correctness is visual and partly subjective: no test deterministically judges "does this
+render match the intended aesthetic." So this pipeline freezes the **design system** (`design-paths`:
+`DESIGN.md` + `tokens.css` + `references/*.png`) instead of a red test, and splits the gate into two
+halves:
 
-1. **Deterministic half (git diff, machine-judged):** the frozen design system must not be
-   tampered with during implementation — `fp-review` runs
-   `git diff <design-rev> <review-tip> -- <design-paths>`; non-empty ⇒ reject. Symmetric to the
-   backend's freeze gate, protecting the "exam paper" (the design) instead of the spec test.
-2. **Visual half (human + skill-judged):** does the *implemented code* actually render the design?
-   `fp-review` runs a visual review (the `design`/`ui` skill's screenshot-iteration mode) against
-   the frozen `references/*.png`, then a **human confirms** before the only merge.
+1. **Deterministic half (git diff, machine-judged):** the frozen design system must not be tampered
+   with during implementation — `fp-review` runs
+   `git diff <design-rev> <review-tip> -- <design-paths>`; non-empty ⇒ reject.
+2. **Visual half (skill + human-judged):** does the implemented code actually render the design?
+   `fp-review` runs a visual review (the `design`/`ui` skill's screenshot-iteration mode) against the
+   frozen `references/*.png`, then a **human confirms** before the only merge.
 
-There is no "make it green" equivalent for aesthetics. The deterministic gate protects the design
-*contract* from silent edits; the visual gate + human confirm judge *adherence*. Both must pass.
+Both halves must pass. The deterministic half protects the design contract from silent edits; the
+visual half + human confirm judge adherence. Neither alone is sufficient.
 
 ## The shim loop (every command runs exactly this)
 

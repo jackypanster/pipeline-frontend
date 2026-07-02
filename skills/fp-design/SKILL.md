@@ -47,8 +47,7 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
 
 ## Hard rules
 
-- You may ask the human questions (this is the HITL stage — aesthetic direction matters). Wait for
-  answers; do not guess the vibe.
+- Ask the human for the aesthetic direction; wait for answers; do not guess the vibe.
 - One feature at a time. Write only `design-paths` (`DESIGN.md` + `tokens.css` + `references/*`) +
   `current.json` metadata. No src, no build config, no implementation.
 - `tokens.css` MUST be valid CSS and consistent with `DESIGN.md`. `references/` MUST exist (the
