@@ -76,8 +76,15 @@ alone is sufficient.
 
 ## State machine (frozen — do not change)
 
-`status: todo → in-progress → review → done`; `blocked` = terminal.
-`attempts` starts at 0; on failure or review rejection `attempts++`; `attempts >= 3 ⇒ blocked`.
+The live position is **`current.json.stage`** (cache — journal tail authoritative):
+`design → in-progress → impl → done`; `blocked` = terminal. Each stage writes its own transition:
+fp-design freeze ⇒ `design` · fp-impl start ⇒ `in-progress` · fp-impl PR open ⇒ `impl` ·
+fp-review merge ⇒ `done`. An impl failure or review rejection with `attempts < 3` flips `stage`
+back to `design` (the pre-impl state) for an informed retry. Distinct vocabulary: each journal
+ENTRY additionally records a per-entry outcome `completed | failed | blocked` (see §Run journal) —
+never confuse the two.
+`attempts` starts at 0; on failure or review rejection `attempts++`;
+`attempts >= 3 ⇒ stage: blocked` (journal entry `status=blocked`, STOP, surface to the human).
 **Only `fp-review` merges**, and only after an explicit human confirm.
 **Never force-push trunk or any shared/published ref; never delete anything beyond a feature's
 own branch.** (An in-flight `feat/<feature>` branch is the coder's own — `fp-impl` MAY rebase it
@@ -122,8 +129,8 @@ to rebase — a routing outcome, `attempts` unchanged, never a false "tampered" 
 | stage | write-set (may create/modify) | must NOT touch |
 |---|---|---|
 | design | `DESIGN.md`, `tokens.css`, `references/*`, `spec/*`, `CONTEXT.md` (optional) | src, build config |
-| impl | `src/**`, impl-paths, build config, the feature's `status` field | **design-paths + spec-paths** (the freeze gate) |
-| review | `reviews/*`, `references/*.png` (post-merge rebaseline ONLY), card `status`→done | any product code (it merges, never authors) |
+| impl | `src/**`, impl-paths, build config, the feature's `stage` field | **design-paths + spec-paths** (the freeze gate) |
+| review | `reviews/*`, `references/*.png` (post-merge rebaseline ONLY), `stage`→done | any product code (it merges, never authors) |
 
 **`design-paths`** = `.pipeline/<feature>/DESIGN.md` + `.pipeline/<feature>/tokens.css` +
 `.pipeline/<feature>/references/` (the frozen design system).
@@ -268,7 +275,7 @@ Your task (concrete, numbered):
   2. <step>
 Feature gotchas (project-specific traps):
   - <e.g. design uses OKLCH; tokens.css is the freeze — never edit it in impl; mock API base in .env>
-Done when: <success criterion>. On success: <status transition>, then run fp-<after>.
+Done when: <success criterion>. On success: <stage transition>, then run fp-<after>.
 On failure: attempts++; >=3 ⇒ blocked ⇒ run fp-hunt (TBD).
 <<< END
 ```

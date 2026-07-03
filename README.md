@@ -55,7 +55,7 @@ plus a visual review (render matches the design; skill + human).
 > live render against the frozen references (skill + human).
 >
 > **Source of truth is `journal.md`** (append-only; last entry = live position). State machine:
-> `todo → in-progress → review → done`. **Hard invariants:** only `fp-review` merges, only after
+> `design → in-progress → impl → done` (`blocked` terminal). **Hard invariants:** only `fp-review` merges, only after
 > explicit human confirmation; never edit frozen `design-paths` or `spec-paths` (re-route to
 > `fp-design` to re-freeze); never force-push trunk; metadata on trunk, reviewed code on
 > `feat/<feature>` via PR.

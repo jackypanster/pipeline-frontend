@@ -49,10 +49,10 @@ Constrain it accordingly.
    **do NOT fail** — push the branch + make that same `main` commit anyway, and say in the handoff
    that the PR must be opened manually (branch + base named). Hand off to **fp-review**.
 5. **Fail / budget exhausted** ⇒ on `main`: `attempts++`, decide by retry budget BEFORE committing:
-   - **`attempts < 3`** ⇒ `stage` back to the pre-impl state, journal `status=failed`, next =
-     **fp-impl** (informed retry — the `## Attempt N` note carries the failure context).
-   - **`attempts >= 3`** ⇒ journal `status=blocked`, STOP and surface to the human (no `fp-hunt`
-     stage in this MVP).
+   - **`attempts < 3`** ⇒ `stage` back to `design` (the pre-impl state), journal `status=failed`,
+     next = **fp-impl** (informed retry — the `## Attempt N` note carries the failure context).
+   - **`attempts >= 3`** ⇒ `stage: blocked` (terminal), journal `status=blocked`, STOP and surface
+     to the human (no `fp-hunt` stage in this MVP).
    Commit the `current.json` + journal update to `main` in ONE commit, then print the handoff.
 
 ## Hard rules
