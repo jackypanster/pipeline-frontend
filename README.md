@@ -8,9 +8,11 @@ command-skills over a git+md state bus. Human-relayed (no scheduler); each comma
 handoff the operator copies to the next bot. The only durable asset is the orchestration contract;
 the skill behind each command is a swappable `roles.yaml` slot.
 
-Design-first: the pipeline freezes a design system (`DESIGN.md` + `tokens.css` + reference
-screenshots) before any code, then gates implementation against it — a deterministic git diff
-(design un-tampered) plus a visual review (render matches the design).
+Design-first: the pipeline freezes a design system (`DESIGN.md` + `tokens.css` + `references/`
+with a regenerable `preview.html` + its screenshots) AND a minimal behavioral red test (`spec/`,
+red at freeze) before any code, then gates implementation against them — merge-base tamper diff
+(frozen paths untouched on the branch), frozen spec green + tokens actually consumed (machine),
+plus a visual review (render matches the design; skill + human).
 
 ## Files
 
@@ -23,9 +25,9 @@ screenshots) before any code, then gates implementation against it — a determi
 
 | command | slot → skill | in → out |
 |---|---|---|
-| fp-design | design-intelligence skill | product brief → `DESIGN.md` + `tokens.css` + `references/*` frozen (`design-rev`) |
-| fp-impl | `<autonomous-coding-skill>` | frozen design → working frontend code + PR (zero design-paths edits) |
-| fp-review | `design`/`ui` skill | diff + live render → visual review + merge (only stage that merges) |
+| fp-design | design-intelligence skill | product brief → `DESIGN.md` + `tokens.css` + `references/*` + `spec/*` (red) frozen (`design-rev`) |
+| fp-impl | `<autonomous-coding-skill>` | frozen design → working frontend code + PR (spec green; zero design/spec-paths edits) |
+| fp-review | `design`/`ui` skill | diff + spec run + live render → gates + visual review + merge (only stage that merges) |
 
 ## Onboard a target project (paste into its `AGENTS.md` / `CLAUDE.md`)
 
@@ -43,19 +45,24 @@ screenshots) before any code, then gates implementation against it — a determi
 > `git pull` alone.
 >
 > **Design-first.** `fp-design` freezes the design system (`DESIGN.md` + `tokens.css` +
-> `references/*.png`) to trunk as `design-rev` BEFORE any code. `fp-impl` produces code without
-> touching `design-paths`. `fp-review` enforces two gates: `git diff <design-rev>..review-tip --
-> <design-paths>` non-empty ⇒ reject (design tampered), AND a visual review comparing the live
-> render against the frozen references.
+> `references/` — a regenerable `preview.html` + screenshots captured from it) AND a minimal
+> behavioral red test (`spec/*`, red at freeze) to trunk as `design-rev` BEFORE any code. `fp-impl`
+> makes the spec green without touching `design-paths` or `spec-paths`. `fp-review` enforces, in
+> order: staleness (`design-rev` not an ancestor of the branch tip ⇒ route rebase, not a reject);
+> tamper (`git diff $(git merge-base trunk tip) tip -- design-paths spec-paths` non-empty ⇒
+> reject); behavioral + token (frozen spec run by explicit path must be green; frozen `tokens.css`
+> imported or byte-identical copy; no raw color literals in src); AND a visual review comparing the
+> live render against the frozen references (skill + human).
 >
 > **Source of truth is `journal.md`** (append-only; last entry = live position). State machine:
 > `todo → in-progress → review → done`. **Hard invariants:** only `fp-review` merges, only after
-> explicit human confirmation; never edit frozen `design-paths` (re-route to `fp-design` to
-> re-freeze); never force-push trunk; metadata on trunk, reviewed code on `feat/<feature>` via PR.
+> explicit human confirmation; never edit frozen `design-paths` or `spec-paths` (re-route to
+> `fp-design` to re-freeze); never force-push trunk; metadata on trunk, reviewed code on
+> `feat/<feature>` via PR.
 >
 > **To act:** read `CONTRACT.md` in [`jackypanster/pipeline-frontend`](https://github.com/jackypanster/pipeline-frontend)
-> first, then this repo's `.pipeline/<feature>/DESIGN.md` + `tokens.css` + `references/` + the
-> journal tail. Do not hand-edit work out of band — run the stages.
+> first, then this repo's `.pipeline/<feature>/DESIGN.md` + `tokens.css` + `references/` + `spec/`
+> + the journal tail. Do not hand-edit work out of band — run the stages.
 
 ## Install (agent: execute this)
 

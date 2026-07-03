@@ -4,22 +4,38 @@ Single source of truth for every `fp-*` skill. Commands carry **no logic of thei
 they follow this. See [DESIGN.md](DESIGN.md) for the design contract (core principle · commands ·
 borrowed/rejected · constraints · open items).
 
-## What this freezes — the design system, not a red test
+## What this freezes — the design system AND a behavioral spec
 
-Frontend correctness is visual and partly subjective: no test deterministically judges "does this
-render match the intended aesthetic." So this pipeline freezes the **design system** (`design-paths`:
-`DESIGN.md` + `tokens.css` + `references/*.png`) instead of a red test, and splits the gate into two
-halves:
+Frontend correctness has two natures. **Aesthetics** is visual and partly subjective — no test
+deterministically judges "does this render match the intended aesthetic," so there is no aesthetic
+red test. **Behavior** (screens mount, `data-*` hooks exist, key interactions work) IS
+deterministically testable and stays a frozen red test, exactly like the backend sibling's
+spec-paths. So `fp-design` freezes BOTH:
 
-1. **Deterministic half (git diff, machine-judged):** the frozen design system must not be tampered
-   with during implementation — `fp-review` runs
-   `git diff <design-rev> <review-tip> -- <design-paths>`; non-empty ⇒ reject.
-2. **Visual half (skill + human-judged):** does the implemented code actually render the design?
-   `fp-review` runs a visual review (the `design`/`ui` skill's screenshot-iteration mode) against the
-   frozen `references/*.png`, then a **human confirms** before the only merge.
+- **`design-paths`** = `DESIGN.md` + `tokens.css` + `references/*` — the aesthetic contract.
+  `references/` contains `preview.html` (a static, regenerable page rendering the frozen tokens +
+  components) and the `*.png` reference screenshots **captured from it**.
+- **`spec-paths`** = `spec/*` — a minimal headless behavioral red test (stable `data-*` hooks, key
+  interactions, basic a11y). **RED at freeze** (the feature doesn't exist yet; on a greenfield repo
+  it may not even run) — `fp-impl` makes it green and never edits it. It asserts behavior ONLY —
+  never pixels, colors, spacing or layout (aesthetics has no oracle; that is the visual gate's job).
 
-Both halves must pass. The deterministic half protects the design contract from silent edits; the
-visual half + human confirm judge adherence. Neither alone is sufficient.
+`fp-review` then runs four checks in order — 1–3 machine-judged, 4 skill+human:
+
+1. **Staleness (routing, NOT a reject):** `git merge-base --is-ancestor <design-rev> <review-tip>`
+   fails ⇒ the branch predates the current freeze ⇒ route to `fp-impl` to rebase onto trunk
+   (`attempts` unchanged — nobody failed).
+2. **Tamper:** `git diff $(git merge-base <trunk> <review-tip>) <review-tip> -- <design-paths> <spec-paths>`
+   non-empty ⇒ the branch ITSELF edited frozen paths ⇒ reject.
+3. **Behavioral + token adherence:** the frozen spec, run **by explicit path**, must be green; the
+   frozen `tokens.css` must be actually consumed (imported, or a byte-identical copy); src styles
+   must carry no raw color literals (see §Behavioral & token gate).
+4. **Visual (skill + human):** the rendered UI matches the design — screenshot review against the
+   frozen references, then a **human confirms** before the only merge.
+
+All must pass. The deterministic checks protect both frozen contracts from silent edits and catch
+behavioral/token drift the eye misses; the visual review + human confirm judge adherence. None
+alone is sufficient.
 
 ## The shim loop (every command runs exactly this)
 
@@ -67,7 +83,8 @@ One feature in flight at a time (the human serializes; `current.json` is a singl
     journal.md            append-only run log — one entry per completed stage
     DESIGN.md             the frozen design system: palette / typography / spacing / components / motion
     tokens.css            CSS variables (the machine-diffable half of the freeze)
-    references/           frozen reference screenshots / mockups (*.png) — the visual oracle
+    references/           preview.html (regenerable render of the frozen system) + *.png captured from it — the visual oracle
+    spec/                 frozen behavioral red test (data-* hooks / interactions / a11y) — red at freeze, impl makes it green
     arch.md  CONTEXT.md   optional component boundaries / domain glossary
     impl-notes.md         optional: what fp-impl changed, gotchas
     reviews/review-NN.md  fp-review findings
@@ -86,50 +103,83 @@ merge).
 **Reconcile an in-flight branch with advanced trunk design.** If trunk's frozen design advances
 after the branch was cut — a **re-freeze** (new `design-rev`) — the existing `feat/<feature>`
 carries the STALE design. `fp-impl` must **rebase `feat/<feature>` onto trunk + force-push** before
-continuing, so the branch carries the current frozen design. Otherwise review's freeze gate diffs
-the new `design-rev` against a stale branch tip and **falsely rejects**.
+continuing, so the branch carries the current frozen design. An un-rebased branch is caught by
+review's **staleness check** (design-rev not an ancestor of the tip) and routed back to `fp-impl`
+to rebase — a routing outcome, `attempts` unchanged, never a false "tampered" reject.
 
 | stage | write-set (may create/modify) | must NOT touch |
 |---|---|---|
-| design | `DESIGN.md`, `tokens.css`, `references/*`, `CONTEXT.md` (optional) | src, build config |
-| impl | `src/**`, impl-paths, build config, the feature's `status` field | **design-paths** (the freeze gate) |
-| review | `reviews/*`, card `status`→done | any product code (it merges, never authors) |
+| design | `DESIGN.md`, `tokens.css`, `references/*`, `spec/*`, `CONTEXT.md` (optional) | src, build config |
+| impl | `src/**`, impl-paths, build config, the feature's `status` field | **design-paths + spec-paths** (the freeze gate) |
+| review | `reviews/*`, `references/*.png` (post-merge rebaseline ONLY), card `status`→done | any product code (it merges, never authors) |
 
-**`design-paths`** = `DESIGN.md` + `tokens.css` + `references/*` (the frozen design system). It is
-the freeze gate. `design-paths ∩ impl-paths = ∅` (`fp-design` asserts; `fp-review` re-checks).
+**`design-paths`** = `DESIGN.md` + `tokens.css` + `references/*` (the frozen design system).
+**`spec-paths`** = `spec/*` (the frozen behavioral red test). Together they are the freeze gate.
+`(design-paths ∪ spec-paths) ∩ impl-paths = ∅` (`fp-design` asserts; `fp-review` re-checks).
 
 Every stage additionally **appends one entry to `journal.md`** (append-only metadata, same class
 as `current.json`).
 
-## The freeze gate — design-paths, frozen on trunk
+## The freeze gate — design-paths + spec-paths, frozen on trunk
 
-`fp-design` freezes the design system in **two ordered commits**:
+`fp-design` freezes the design system AND the behavioral spec in **two ordered commits**:
 
-1. **Freeze commit** — write the complete `DESIGN.md` + `tokens.css` + `references/*.png`,
-   touching **only `design-paths`**, in **ONE** commit. Its hash = the feature's single
-   **`design-rev`**, recorded in `current.json`. `tokens.css` must compile (valid CSS); `DESIGN.md`
-   must be internally consistent. `references/` carries the accepted screenshots/mockups that
-   `fp-review` will visually compare against.
+1. **Freeze commit** — write the complete `DESIGN.md` + `tokens.css` + `references/*` (incl.
+   `preview.html` and the `*.png` captured from it) + `spec/*`, touching **only
+   `design-paths` + `spec-paths`**, in **ONE** commit. Its hash = the feature's single
+   **`design-rev`**, recorded in `current.json`. `tokens.css` must be valid CSS — **verify by
+   parsing it** (stylelint or any CSS parser), never by eyeball; `DESIGN.md` must be internally
+   consistent. The behavioral spec is authored by the **fp-design agent itself** (the delegated
+   design skill only does the design system) — spec author ≠ implementer holds: design authors the
+   red test, impl makes it green.
 2. **Record commit** — advance `current.json.stage` to `design` and record `design-rev`. This
-   commit touches **metadata only (current.json)**, never `design-paths` — so the freeze stays
+   commit touches **metadata only (current.json)**, never frozen paths — so the freeze stays
    intact.
 
-Invariant: `design-paths ∩ impl-paths = ∅`. `fp-impl` produces the frontend code via `src` +
-`impl-paths` only, and must NOT create/modify/delete anything under `design-paths`. `fp-review`
-runs the deterministic diff
-`git diff <design-rev> <review-tip> -- <design-paths>` (review-tip = PR head) **FIRST**;
-**non-empty ⇒ reject** (`attempts++`, route to impl, or hunt at ≥3). If the design itself is wrong,
-that is NOT an impl fix — re-route to `fp-design` to re-freeze (a new single commit, new
-`design-rev`; the re-route handoff MUST name what changed). Git-only, no CI.
+Invariant: `(design-paths ∪ spec-paths) ∩ impl-paths = ∅`. `fp-impl` produces the frontend code via
+`src` + `impl-paths` only, and must NOT create/modify/delete anything under `design-paths` or
+`spec-paths`. `fp-review` runs the deterministic checks **FIRST**, in this order (review-tip = PR
+head / `feat/<feature>` tip, after `git fetch`):
 
-**Re-freeze** updates **only `design-rev`** (and the design files in the new freeze commit) and is
-NOT initial authoring, so it never resets `attempts`. Both re-freeze advance trunk's design under
+1. **Staleness (routing):** `git merge-base --is-ancestor <design-rev> <review-tip>` — if the
+   design-rev is NOT an ancestor of the tip, the branch predates the current freeze. This is NOT a
+   reject: route to `fp-impl` to rebase onto trunk + force-push, `attempts` unchanged.
+2. **Tamper (reject):** `git diff $(git merge-base <trunk> <review-tip>) <review-tip> -- <design-paths> <spec-paths>`
+   — diffs the branch against its OWN fork point, so only edits made ON the branch count.
+   **Non-empty ⇒ reject** (`attempts++`, route to impl, or blocked at ≥3).
+
+If the design itself is wrong, that is NOT an impl fix — re-route to `fp-design` to re-freeze (a
+new single commit, new `design-rev`; the re-route handoff MUST name what changed). Git-only, no CI.
+
+**Re-freeze** updates **only `design-rev`** (and the frozen files in the new freeze commit) and is
+NOT initial authoring, so it never resets `attempts`. A re-freeze advances trunk's design under
 any in-flight branch, so the handoff to impl must say **rebase `feat/<feature>` onto trunk +
-force-push** before continuing.
+force-push** before continuing (the staleness check enforces this at review time).
+
+## The behavioral & token gate — fp-review's deterministic positive half
+
+The freeze gate is a **negative** check (frozen files untouched). Untouched frozen files prove
+nothing about the code — impl can leave every frozen path intact and still ship a UI that ignores
+them (the fake-green trap). So after the freeze gate, `fp-review` runs three **positive**
+deterministic checks; any failure ⇒ reject (`attempts++`, route impl):
+
+1. **Behavioral spec green.** Run the frozen spec **by explicit path** (e.g.
+   `npx vitest run .pipeline/<feature>/spec/`) against the branch — never trust the repo's default
+   test glob (impl owns build config and could exclude it), never trust impl's self-report.
+   Red or not runnable ⇒ reject.
+2. **Tokens consumed.** The frozen `tokens.css` must actually reach the build: src imports the
+   frozen file directly (relative path or build alias), OR carries a copy that is **byte-identical**
+   (`git diff --no-index .pipeline/<feature>/tokens.css <copy>` empty). A drifted copy ⇒ reject.
+3. **Token adherence.** Src styles must reference `var(--*)` — no raw color literals
+   (hex/`rgb()`/`hsl()`/`oklch()`) in src stylesheets or inline styles. Check with stylelint
+   (e.g. `color-no-hex` + declaration-strict-value) or a grep sweep. Violations ⇒ reject.
+
+These are the only places in a frontend flow where a real machine oracle exists — use them fully so
+the visual gate spends human attention on aesthetics only.
 
 ## The visual gate — fp-review's subjective half
 
-After the deterministic diff is empty (design un-tampered), `fp-review` runs the **visual review**:
+After the deterministic gates pass, `fp-review` runs the **visual review**:
 
 1. Build/run the feature branch. Capture real screenshots of the implemented UI at desktop width
    **and** 375px mobile (and any breakpoint the design specifies).
@@ -141,8 +191,28 @@ After the deterministic diff is empty (design un-tampered), `fp-review` runs the
    beyond acceptable polish, **reject** (`attempts++`, route impl) with the specific deltas named.
 4. Only when the visual review passes AND the human explicitly confirms does `fp-review` merge.
 
-There is no automated pass/fail for aesthetics. The deterministic gate guarantees the design was
-not silently re-authored; the visual gate + human confirm judge adherence. **Both are mandatory.**
+**Reference provenance — pre-ship vs post-ship.** Before the feature first ships, `references/*.png`
+are captured from the frozen `preview.html` — they are **design-intent references, not pixel
+oracles**: a real implementation never pixel-matches a pre-code render (fonts, real data, browser
+differences). Judge adherence to the DESIGN.md/tokens rules the references embody, never pixel
+equality — demanding pixel equality against a mockup deadlocks the feature into `blocked`.
+
+**Post-merge rebaseline.** Immediately after the human-confirmed merge, capture the ACCEPTED
+render's screenshots and commit them to `references/` (replacing the preview-derived shots) in the
+post-merge metadata commit; journal the rebaseline. The accepted implementation — not the mockup —
+is the durable visual baseline for regressions and follow-up features.
+
+**Secondary pixel signal (post-rebaseline only).** From the first rebaseline onward, additionally
+run a deterministic screenshot diff (Playwright snapshots or any pixel differ) of the live render
+vs the accepted baselines, and feed the boxed differences INTO the visual review as triage input.
+Rationale: VLM-only review systematically misses fine-grained spacing/color/opacity drift
+(DiffSpot, arxiv 2605.29615) — the pixel diff catches what the eye and the model miss. It is a
+signal, **never** an auto pass/fail: the skill + human still judge. Pre-rebaseline it is
+meaningless (diffing against a mockup) — do not run it.
+
+There is no automated pass/fail for aesthetics. The deterministic gates guarantee the contracts
+were not silently re-authored and the behavior/tokens are real; the visual gate + human confirm
+judge adherence. **All are mandatory.**
 
 ## Handoff block — a self-contained briefing for a COLD next node
 
@@ -163,7 +233,8 @@ Read for context (before acting):
   - <repo>/AGENTS.md|CLAUDE.md (if present) — repo-wide conventions
   - <path/DESIGN.md>     — the frozen design system (palette / type / spacing / components / motion)
   - <path/tokens.css>    — CSS variables (the machine-diffable freeze)
-  - <path/references/>   — frozen reference screenshots — the visual oracle
+  - <path/references/>   — preview.html + frozen reference screenshots — the visual oracle
+  - <path/spec/>         — frozen behavioral red test — impl makes it green, never edits it
 Your task (concrete, numbered):
   1. <step>
   2. <step>

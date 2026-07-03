@@ -5,20 +5,28 @@ only durable asset is this contract (command sequence + handoff format + git+md 
 the design-freeze gate). Each command is a ~20-line shim delegating to a swappable skill.
 Forge-agnostic, machine-agnostic, human-relayed, no scheduler.
 
-## The gate — design system freeze, not a red test
+## The gate — design system freeze PLUS a behavioral red test
 
-Correctness for a frontend surface is visual and partly subjective: no test deterministically
-answers "does this render match the intended aesthetic." So this pipeline freezes the **design
-system** (`design-paths`: `DESIGN.md` + `tokens.css` + `references/*.png`) instead of a red test,
-and splits the gate into two mandatory halves:
+Correctness for a frontend surface splits in two. **Aesthetics** is visual and partly subjective:
+no test deterministically answers "does this render match the intended aesthetic" — so no aesthetic
+red test exists. **Behavior** (screens mount, `data-*` hooks exist, interactions work) IS
+deterministically testable — the general pipeline's ADR-005 practice ("视觉不可冻 → 用稳定 data-*
+钩子锁行为，视觉留 review 眼审") carries over unchanged. So `fp-design` freezes the **design
+system** (`design-paths`: `DESIGN.md` + `tokens.css` + `references/*` incl. the regenerable
+`preview.html` the reference shots are captured from) AND a minimal **behavioral red test**
+(`spec-paths`: `spec/*` — red at freeze, impl makes it green, asserts behavior never pixels), and
+the gate has four mandatory layers:
 
-| half | what | judged by | gate |
+| layer | what | judged by | gate |
 |---|---|---|---|
-| deterministic | design system not tampered during impl | machine | `git diff <design-rev> <review-tip> -- <design-paths>` non-empty ⇒ reject |
-| visual | rendered UI matches the design | skill + human | `design`/`ui` skill screenshot-iteration + human confirm |
+| staleness | branch carries the current freeze | machine | `design-rev` not ancestor of review-tip ⇒ route rebase (NOT a reject, attempts unchanged) |
+| tamper | frozen paths untouched ON the branch | machine | `git diff $(git merge-base trunk tip) tip -- design-paths spec-paths` non-empty ⇒ reject |
+| behavioral + token | spec green (run by path) · tokens.css consumed (import or byte-identical copy) · no raw color literals in src | machine | any failure ⇒ reject |
+| visual | rendered UI matches the design | skill + human | `design`/`ui` skill screenshot-iteration + human confirm; post-rebaseline pixel diff as triage signal |
 
-Both must pass. Neither alone is sufficient: the deterministic half protects the design contract
-from silent edits; the visual half + human confirm judge adherence.
+All must pass. The tamper half is a NEGATIVE check — untouched frozen files prove nothing about the
+code (fake-green trap); the behavioral/token layer is the deterministic POSITIVE check; the visual
+layer + human confirm judge adherence, which no machine can.
 
 ## Core principle: skills reason/generate, the shim does I/O
 
@@ -48,9 +56,9 @@ your briefing.
 
 | command | delegates to (skill) | in → out |
 |---|---|---|
-| fp-design | design intelligence skill (generates a complete design system from a product brief) | brief → `DESIGN.md` + `tokens.css` + `references/*` frozen on trunk (`design-rev`) |
-| fp-impl | `<autonomous-coding-skill>` (think → code → check loop) | frozen design → working frontend code on `feat/<feature>` (zero design-paths edits) |
-| fp-review | `design`/`ui` skill (screenshot-iteration visual review) | diff + live render → review (freeze gate + visual gate) + merge (only stage that merges) |
+| fp-design | design intelligence skill (generates a complete design system from a product brief) | brief → `DESIGN.md` + `tokens.css` + `references/*` (preview.html + shots) + `spec/*` (red) frozen on trunk (`design-rev`) |
+| fp-impl | `<autonomous-coding-skill>` (think → code → check loop) | frozen design → working frontend code on `feat/<feature>` (spec green; zero design/spec-paths edits) |
+| fp-review | `design`/`ui` skill (screenshot-iteration visual review) | diff + live render → review (freeze + behavioral/token + visual gates) + merge (only stage that merges) |
 
 ```yaml
 # .pipeline/roles.yaml  (one per target repo; any line independently swappable to a best-of-breed skill)
@@ -69,13 +77,17 @@ onboarding snippet or the contract.
 **Borrowed:** the ~20-line shim shape; `journal.md` as authoritative tail; the handoff block; the
 state machine; the forge adapter; propose-only self-improvement; the `DESIGN.md` scaffold standard
 (open-sourced by Google Stitch, from `getdesign.md`); three-layer design-token architecture
-(primitive→semantic→component).
-**Rejected:** a red-test gate (wrong domain — aesthetics have no deterministic oracle); binding a
+(primitive→semantic→component); the general pipeline's ADR-005 hybrid — freeze behavior as a
+headless red test (`data-*` hooks), leave aesthetics to skill+human review.
+**Rejected:** an AESTHETIC red-test gate (wrong domain — aesthetics has no deterministic oracle;
+the BEHAVIORAL red test is kept — behavior does have one); binding a
 specific design-generation tool into the contract (Stitch / OpenDesign / Gemini AI Studio / Claude
-Code's `design` skill are interchangeable slots, the contract names none); heavy visual-regression
-CI pre-emptively (brittle, added only on a real miss signal); a mandatory online design-tool stage
-(fails closed offline — the local `design_system` script generates deterministically with zero
-network, so the MVP runs air-gapped).
+Code's `design` skill are interchangeable slots, the contract names none); pixel diff as an
+autonomous pass/fail oracle (adopted only as a post-rebaseline triage SIGNAL feeding the visual
+review — DiffSpot, arxiv 2605.29615, shows VLM-only review misses fine-grained drift, so the
+signal is warranted; auto-verdicts on pixels stay rejected as brittle); a mandatory online
+design-tool stage (fails closed offline — the local `design_system` script generates
+deterministically with zero network, so the MVP runs air-gapped).
 
 ## Constraints
 
@@ -90,10 +102,11 @@ is a new ~20-line shim + one `roles.yaml` line + the prior command's handoff nam
 - **`fp-hunt` (root-cause a blocked card)** — MVP has no `blocked` path exercised. Add `fp-hunt`
   when a real impl/review deadlock appears; until then `attempts >= 3` stops and surfaces to the
   human.
-- **Visual regression baseline (Playwright)** — the visual gate is skill + human. Add an optional
-  Playwright snapshot baseline as a *secondary* deterministic signal only if review repeatedly
-  misses pixel regressions (never a replacement for human confirm; do not add pre-emptively — heavy
-  and brittle, ratchet: every line traces to a real failure).
+- **Visual regression baseline (Playwright)** — RESOLVED, no longer open. The ratchet trigger
+  ("a real miss signal") arrived as published evidence instead of a local failure: DiffSpot
+  (arxiv 2605.29615) shows VLM review systematically misses fine-grained spacing/color/opacity
+  drift. Adopted as a post-rebaseline triage signal feeding the visual review — never an
+  auto pass/fail (CONTRACT §Visual gate).
 - **`fp-freeze` (promote the first feature's design to a repo-level product.md)** — a one-off
   consolidation after feature 1 ships, so features 2+ inherit a stable house style. Not a pipeline
   stage; an opportunistic skill run when the design language is settled.

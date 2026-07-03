@@ -1,6 +1,6 @@
 ---
 name: fp-review
-description: "Frontend pipeline stage 3 — review the implementation against the frozen design and merge. Runs the deterministic freeze gate (design-paths un-tampered) AND the visual gate (render matches design), then merges after human confirm. The ONLY stage that merges. Use after fp-impl. Args: repo, branch, pr."
+description: "Frontend pipeline stage 3 — review the implementation against the frozen design and merge. Runs staleness routing, the tamper gate (design/spec-paths untouched on the branch), the behavioral+token gate (frozen spec green, tokens consumed, no raw colors) AND the visual gate (render matches design), then merges after human confirm and rebaselines references. The ONLY stage that merges. Use after fp-impl. Args: repo, branch, pr."
 ---
 
 # fp-review
@@ -15,35 +15,65 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
 
 1. `git pull --rebase`. Read `current.json` (must have `design-rev` and `stage: impl` — else STOP).
 2. Resolve `review` slot; verify installed (else STOP).
-3. **GATE 1 — deterministic freeze gate** (run FIRST; CONTRACT §Freeze gate):
-   - `git fetch origin && git diff <design-rev> <review-tip> -- <design-paths>`
+3. **GATE 0 — staleness check** (routing, NOT a reject; CONTRACT §Freeze gate):
+   - `git fetch origin`, then `git merge-base --is-ancestor <design-rev> <review-tip>`
      (review-tip = the PR head / `feat/<feature>` tip).
-   - **Non-empty diff ⇒ REJECT**: the frozen design was edited during impl. `attempts++`, flip the
+   - **Not an ancestor ⇒ the branch predates the current freeze** (trunk re-froze under it). Route
+     to `fp-impl` to rebase onto trunk + force-push. `attempts` UNCHANGED — nobody failed; journal
+     the routing. Never call this "tampered."
+4. **GATE 1 — tamper gate** (deterministic; CONTRACT §Freeze gate):
+   - `git diff $(git merge-base <trunk> <review-tip>) <review-tip> -- <design-paths> <spec-paths>`
+     — the branch against its OWN fork point, so only edits made on the branch count.
+   - **Non-empty diff ⇒ REJECT**: frozen paths were edited during impl. `attempts++`, flip the
      feature back (journal `status=failed`, route to `fp-impl`; or STOP+human at `attempts >= 3`).
-     Write `reviews/review-NN.md` naming exactly what `design-paths` changed and that it must be
-     reverted / re-frozen via `fp-design` if the change is intentional.
-   - Empty diff ⇒ proceed to Gate 2 (the design contract is intact).
-4. **GATE 2 — visual gate** (CONTRACT §Visual gate):
+     Write `reviews/review-NN.md` naming exactly what changed and that it must be reverted /
+     re-frozen via `fp-design` if the change is intentional.
+5. **GATE 2 — behavioral + token gate** (deterministic; CONTRACT §Behavioral & token gate). Run all
+   three yourself — never trust impl's self-report:
+   - **Spec green:** run the frozen spec **by explicit path** (e.g.
+     `npx vitest run .pipeline/<feature>/spec/`) on the branch — never the repo's default test glob
+     (impl owns build config and could exclude it). Red or not runnable ⇒ REJECT.
+   - **Tokens consumed:** src imports the frozen `tokens.css`, or carries a byte-identical copy
+     (`git diff --no-index .pipeline/<feature>/tokens.css <copy>` empty). Drifted copy ⇒ REJECT.
+   - **Token adherence:** no raw color literals (hex/rgb/hsl/oklch) in src styles — stylelint or a
+     grep sweep; violations ⇒ REJECT.
+   Any REJECT here: `attempts++`, journal `status=failed`, route `fp-impl` (or STOP+human at ≥3),
+   findings in `reviews/review-NN.md`.
+6. **GATE 3 — visual gate** (CONTRACT §Visual gate):
    - Build/run `feat/<feature>`. Capture real screenshots at desktop width **and** 375px mobile (and
      any breakpoint `DESIGN.md` specifies).
    - Invoke the **`design`/`ui` skill** in screenshot-iteration mode: compare the live render
      against the frozen `references/*.png` + the rules in `DESIGN.md`/`tokens.css`. Name concrete
      visual deltas (color drift, spacing, typography, hierarchy, responsive breakage) — never vague
      "make it modern." Preserve the human's negative label when diagnostic.
+   - **Pre-ship, references are design-intent, not pixel oracles** (they were captured from
+     `preview.html`, not from an implementation): judge adherence to the DESIGN.md/tokens rules —
+     never demand pixel equality against a pre-code render (that deadlocks the feature).
+   - **If a rebaseline exists** (references are accepted-implementation shots from a prior merge):
+     additionally run a deterministic screenshot diff (Playwright snapshots or any pixel differ) vs
+     those baselines and feed the boxed differences INTO your review as triage — a signal, never an
+     auto pass/fail.
    - Write findings to `reviews/review-NN.md`. If deviations exceed acceptable polish ⇒ REJECT
      (`attempts++`, route `fp-impl`) with the specific deltas named. If it matches the frozen design
      ⇒ pass.
-5. **Human confirm + merge** (the ONLY merge). Only after BOTH gates pass AND the human explicitly
+7. **Human confirm + merge** (the ONLY merge). Only after ALL gates pass AND the human explicitly
    confirms: squash-merge `feat/<feature>` via the forge adapter (`gh pr merge` / `gitee-cli` /
-   `git merge`). Then on `main`: `current.json.stage: done`, append the journal entry (one commit).
-   Never merge without human confirm; never author product code (review only merges).
-6. **Print the handoff**: feature shipped, next action (new feature via `fp-design`, or stop).
+   `git merge`). Never merge without human confirm; never author product code (review only merges).
+8. **Post-merge rebaseline + close** (CONTRACT §Visual gate). On `main`, in ONE commit: replace
+   `references/*.png` with the ACCEPTED render's screenshots (the shipped implementation — not the
+   mockup — is the durable baseline for regressions and follow-up features; keep `preview.html`),
+   set `current.json.stage: done`, append the journal entry noting the rebaseline.
+9. **Print the handoff**: feature shipped, next action (new feature via `fp-design`, or stop).
 
 ## Hard rules
 
-- Two gates, both mandatory: deterministic `design-paths` diff (non-empty ⇒ reject) THEN visual
-  review (deviations ⇒ reject). Neither alone is sufficient.
+- All gates mandatory, in order: staleness (route rebase, not a reject) → tamper diff over
+  `design-paths` + `spec-paths` (non-empty ⇒ reject) → behavioral+token (spec green by path, tokens
+  consumed, no raw colors — run them yourself) → visual review (deviations ⇒ reject). None alone is
+  sufficient.
 - Only `fp-review` merges, only after explicit human confirm. Never force-push trunk. Review writes
-  only `reviews/*` + `current.json`/`journal.md` metadata — never product code.
-- A visual rejection routes to `fp-impl`. A design-contract rejection (the frozen design itself is
-  wrong) re-routes to `fp-design` to re-freeze — name what changed in the handoff.
+  only `reviews/*` + `references/*.png` (post-merge rebaseline ONLY) + `current.json`/`journal.md`
+  metadata — never product code.
+- A behavioral/token or visual rejection routes to `fp-impl`. A design-contract rejection (the
+  frozen design or spec itself is wrong) re-routes to `fp-design` to re-freeze — name what changed
+  in the handoff.

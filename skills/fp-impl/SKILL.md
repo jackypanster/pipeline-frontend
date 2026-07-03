@@ -1,6 +1,6 @@
 ---
 name: fp-impl
-description: "Frontend pipeline stage 2 — implement the frozen design as working frontend code: de-hardcode, wire the real backend, open a PR. Writes ZERO design-paths. Use after fp-design. Args: repo, branch."
+description: "Frontend pipeline stage 2 — implement the frozen design as working frontend code: make the frozen behavioral spec green, consume the frozen tokens, de-hardcode, wire the real backend, open a PR. Writes ZERO design-paths/spec-paths. Use after fp-design. Args: repo, branch."
 ---
 
 # fp-impl
@@ -10,8 +10,8 @@ Stage 2. Follow the **shim loop in CONTRACT.md** with slot = `impl`.
 **Skill:** the `impl` slot runs an autonomous think→code→check loop (your runtime's autonomous
 coding skill — Claude Code, Codex, etc.). The pipeline is runtime-agnostic: bind whichever
 autonomous-coding skill your runtime provides in `roles.yaml`. It writes **`src` + build config +
-white-box tests**; it must NOT create or edit anything under `design-paths`. Constrain it
-accordingly.
+white-box tests**; it must NOT create or edit anything under `design-paths` or `spec-paths`.
+Constrain it accordingly.
 
 ## Steps
 
@@ -26,12 +26,19 @@ accordingly.
      branch, never trunk).
    Then flip `current.json.stage: in-progress` and commit it to **`main`** (trunk-authoritative
    metadata — a cold node must read the live state from trunk).
-3. **implement**: read the frozen design (`DESIGN.md` + `tokens.css` + `references/`) FIRST. Then
-   code inside `src/**` + build config on `feat/<feature>` until the feature builds and the rendered
-   UI matches the frozen design. De-hardcode placeholders, wire the real backend/API (base URL from
-   `.env` per CONTRACT step 2), respect the palette/type/spacing in `tokens.css`. Loop
-   think→code→check within the turn budget. Only code lives on the branch; **never touch
-   `design-paths`** (DESIGN.md / tokens.css / references/).
+3. **implement**: read the frozen design (`DESIGN.md` + `tokens.css` + `references/`) AND the
+   frozen spec (`spec/`) FIRST. Then code inside `src/**` + build config on `feat/<feature>` until:
+   - the feature builds and **the frozen spec runs green by explicit path** (e.g.
+     `npx vitest run .pipeline/<feature>/spec/` — wire the runner if the repo has none; review will
+     run it the same way and never trusts the default test glob or your self-report);
+   - `tokens.css` is **actually consumed**: import the frozen file (relative path or build alias),
+     or keep a copy that stays **byte-identical** (review checks `git diff --no-index`);
+   - src styles use `var(--*)` — **no raw color literals** (hex/rgb/hsl/oklch); review lints this;
+   - the rendered UI matches the frozen design.
+   De-hardcode placeholders, wire the real backend/API (base URL from `.env` per CONTRACT step 2).
+   Loop think→code→check within the turn budget. Only code lives on the branch; **never touch
+   `design-paths` or `spec-paths`** (DESIGN.md / tokens.css / references/ / spec/). A wrong or
+   untestable spec is NOT yours to fix — re-route to `fp-design` naming the problem.
 4. **Done** ⇒ push `feat/<feature>`, open/update a PR via the forge adapter, then on `main` flip
    `current.json.stage` to `impl` and **append your handoff to `journal.md`** — one commit on `main`.
    Opening the PR needs the repo's forge token (loaded per CONTRACT step 2). If the token is absent,
@@ -46,8 +53,10 @@ accordingly.
 
 ## Hard rules
 
-- Never touch `design-paths` (`DESIGN.md` / `tokens.css` / `references/`) — the freeze gate. Never
-  merge. Only the feature's `src` + build config.
+- Never touch `design-paths` (`DESIGN.md` / `tokens.css` / `references/`) or `spec-paths`
+  (`spec/`) — the freeze gate. Never merge. Only the feature's `src` + build config.
+- Done requires the frozen spec green BY PATH + tokens consumed (import or byte-identical copy) +
+  zero raw color literals in src styles — review re-checks all three deterministically.
 - Code lives on `feat/<feature>`; `current.json` stage flips commit to `main` (trunk authority —
-  never leave state stranded on the branch). If the frozen design is wrong, do NOT edit it — re-route
-  to `fp-design` to re-freeze (the handoff MUST name what to change).
+  never leave state stranded on the branch). If the frozen design or spec is wrong, do NOT edit it —
+  re-route to `fp-design` to re-freeze (the handoff MUST name what to change).
