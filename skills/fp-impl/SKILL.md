@@ -41,6 +41,10 @@ Constrain it accordingly.
    untestable spec is NOT yours to fix — re-route to `fp-design` naming the problem.
 4. **Done** ⇒ push `feat/<feature>`, open/update a PR via the forge adapter, then on `main` flip
    `current.json.stage` to `impl` and **append your handoff to `journal.md`** — one commit on `main`.
+   The handoff MUST name (review runs these verbatim and false-rejects a correct impl without them):
+   - the **literal spec-run command** as you wired it (e.g. `npx vitest run .pipeline/<feature>/spec/`);
+   - the **token consumption method + location** (the import path of the frozen `tokens.css`, or
+     the path of the byte-identical copy).
    Opening the PR needs the repo's forge token (loaded per CONTRACT step 2). If the token is absent,
    **do NOT fail** — push the branch + make that same `main` commit anyway, and say in the handoff
    that the PR must be opened manually (branch + base named). Hand off to **fp-review**.

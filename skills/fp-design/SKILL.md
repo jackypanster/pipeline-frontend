@@ -43,7 +43,11 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      `data-*` hooks per screen/component, key interactions, basic a11y. YOU (the fp-design agent)
      author it — the design skill only does the design system; spec author ≠ implementer. It is
      RED now (the feature doesn't exist); `fp-impl` makes it green. Assert behavior ONLY — never
-     pixels, colors, spacing or layout.
+     pixels, colors, spacing or layout. Assert through the app's **public surface** only: render
+     the root / visit a route and query `data-*` hooks. NEVER deep-import internal component
+     modules — module layout belongs to impl, and a spec pinned to guessed import paths forces impl
+     to contort `src` around your guesses or loop back here (the likeliest self-inflicted
+     deadlock).
 5. **Freeze in two ordered commits** (CONTRACT §Freeze gate):
    - **Freeze commit** — `git add DESIGN.md tokens.css references/ spec/`, commit. Record its hash
      as **`design-rev`**.
@@ -63,5 +67,8 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
 - `tokens.css` MUST parse as valid CSS (verified, not eyeballed) and be consistent with `DESIGN.md`.
   `references/` MUST exist and its `*.png` MUST be captured from the frozen `preview.html` (the
   visual gate has no honest oracle otherwise).
-- `spec/` MUST exist and be red-at-freeze; it asserts behavior (`data-*` hooks, interactions, a11y)
-  and NEVER pixels/colors/spacing — aesthetics belongs to the visual gate, not the spec.
+- `spec/` MUST exist and MUST NOT pass at freeze: where a runner exists, run it and confirm red;
+  on a greenfield repo with no runner yet, unrunnable is acceptable and expected. A spec that
+  PASSES with no implementation is broken — fix it before freezing. It asserts behavior (`data-*`
+  hooks, interactions, a11y) via the app's public surface, and NEVER pixels/colors/spacing —
+  aesthetics belongs to the visual gate, not the spec.

@@ -16,8 +16,8 @@ plus a visual review (render matches the design; skill + human).
 
 ## Files
 
-- `CONTRACT.md` — frozen protocol every command follows: shim loop · state machine · design-freeze
-  gate · visual gate · handoff · forge adapter.
+- `CONTRACT.md` — frozen protocol every command follows: shim loop · state machine · freeze gate
+  (staleness + tamper) · behavioral & token gate · visual gate · handoff · forge adapter.
 - `DESIGN.md` — design contract: core principle · commands · borrowed/rejected · constraints ·
   open items.
 - `roles.yaml` — per-target-repo slot→skill bindings (copy into the target repo's `.pipeline/`).
@@ -25,7 +25,7 @@ plus a visual review (render matches the design; skill + human).
 
 | command | slot → skill | in → out |
 |---|---|---|
-| fp-design | design-intelligence skill | product brief → `DESIGN.md` + `tokens.css` + `references/*` + `spec/*` (red) frozen (`design-rev`) |
+| fp-design | design-intelligence skill | product brief → `DESIGN.md` + `tokens.css` + `references/*` + `spec/*` (red; agent-authored) frozen (`design-rev`) |
 | fp-impl | `<autonomous-coding-skill>` | frozen design → working frontend code + PR (spec green; zero design/spec-paths edits) |
 | fp-review | `design`/`ui` skill | diff + spec run + live render → gates + visual review + merge (only stage that merges) |
 

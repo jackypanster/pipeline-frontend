@@ -30,8 +30,10 @@ layer + human confirm judge adherence, which no machine can.
 
 ## Core principle: skills reason/generate, the shim does I/O
 
-The design skill (`fp-design`) may author `DESIGN.md` / `tokens.css` inline — that IS its core
-output, the one sanctioned exception. Every other skill reasons; the shim owns all I/O (writing,
+The design stage is the one sanctioned exception: the delegated design skill may author
+`DESIGN.md` / `tokens.css` inline (that IS its core output), and the fp-design AGENT itself authors
+the remaining design-stage artifacts (`references/preview.html` + its screenshots, `spec/*` — the
+design skill does NOT emit these). Every other skill reasons; the shim owns all I/O (writing,
 staging, commit, journal, handoff, write-set enforcement).
 
 Each command body (~20 lines): `git pull --rebase → read current.json + md → resolve skill via
@@ -56,7 +58,7 @@ your briefing.
 
 | command | delegates to (skill) | in → out |
 |---|---|---|
-| fp-design | design intelligence skill (generates a complete design system from a product brief) | brief → `DESIGN.md` + `tokens.css` + `references/*` (preview.html + shots) + `spec/*` (red) frozen on trunk (`design-rev`) |
+| fp-design | design intelligence skill (generates a complete design system from a product brief) | brief → `DESIGN.md` + `tokens.css` + `references/*` (preview.html + shots) + `spec/*` (red; agent-authored, not the skill's) frozen on trunk (`design-rev`) |
 | fp-impl | `<autonomous-coding-skill>` (think → code → check loop) | frozen design → working frontend code on `feat/<feature>` (spec green; zero design/spec-paths edits) |
 | fp-review | `design`/`ui` skill (screenshot-iteration visual review) | diff + live render → review (freeze + behavioral/token + visual gates) + merge (only stage that merges) |
 
@@ -105,7 +107,8 @@ is a new ~20-line shim + one `roles.yaml` line + the prior command's handoff nam
 - **Visual regression baseline (Playwright)** — RESOLVED, no longer open. The ratchet trigger
   ("a real miss signal") arrived as published evidence instead of a local failure: DiffSpot
   (arxiv 2605.29615) shows VLM review systematically misses fine-grained spacing/color/opacity
-  drift. Adopted as a post-rebaseline triage signal feeding the visual review — never an
+  drift. Adopted as a CROSS-FEATURE triage signal feeding the visual review — fires from feature 2
+  onward, diffing surfaces covered by previously shipped features' rebaselined references; never an
   auto pass/fail (CONTRACT §Visual gate).
 - **`fp-freeze` (promote the first feature's design to a repo-level product.md)** — a one-off
   consolidation after feature 1 ships, so features 2+ inherit a stable house style. Not a pipeline
