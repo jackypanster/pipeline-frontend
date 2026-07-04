@@ -56,11 +56,14 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      desktop + one 375px-mobile capture. These are the **visual oracle** `fp-review` compares the
      live render against, pre-ship.
    - `spec/*` — a minimal headless **behavioral red test** (CONTRACT §What this freezes): stable
-     `data-*` hooks per screen/component, key interactions, and the deterministic a11y + motion
-     subset (behavior/structure ONLY, never pixels): a `@media (prefers-reduced-motion)` block
-     exists; no src transition/animation targets top/left/width/height (parse the static CSS); each
-     named interaction's `data-*` hook toggles (e.g. bad input ⇒ `[data-invalid]`); a skip-link
-     anchor exists; sortable tables carry `aria-sort`; numeric cells carry the tabular-nums hook.
+     `data-*` hooks per screen/component, key interactions, and the deterministic a11y + interaction
+     subset — **assert through the rendered PUBLIC SURFACE only** (query the DOM; never parse src
+     files or assume a style-source shape — impl owns that, and a spec pinned to a guessed source
+     shape false-rejects a valid impl): each named interaction's `data-*` hook toggles (e.g. bad
+     input ⇒ `[data-invalid]`); a skip-link anchor exists; sortable tables carry `aria-sort`; numeric
+     cells carry the tabular-nums hook. (The source-level motion discipline — transform/opacity-only,
+     a `prefers-reduced-motion` block — is NOT a spec assertion; it assumes a source shape that
+     doesn't exist yet, so `fp-review` lints it against the built artifact instead.)
      YOU (the fp-design agent)
      author it — the design skill only does the design system; spec author ≠ implementer. It is
      RED now (the feature doesn't exist); `fp-impl` makes it green. Assert behavior ONLY — never

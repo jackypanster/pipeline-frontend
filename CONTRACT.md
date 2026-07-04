@@ -16,10 +16,12 @@ spec-paths. So `fp-design` freezes BOTH:
   `references/` contains `preview.html` (a static, regenerable page rendering the frozen tokens +
   components) and the `*.png` reference screenshots **captured from it** (pre-ship; a post-merge
   rebaseline replaces the shots with accepted-implementation captures — §Visual gate).
-- **`spec-paths`** = `spec/*` — a minimal headless behavioral red test (stable `data-*` hooks, key
-  interactions, the a11y checklist — skip-link / focus-trap / aria-sort / tabular-nums /
-  reduced-motion, per DESIGN.md §Accessibility — and the motion-behavior subset: transitions animate
-  transform/opacity only, a `prefers-reduced-motion` block exists). **RED at freeze** (the feature doesn't exist yet; on a greenfield repo
+- **`spec-paths`** = `spec/*` — a minimal headless behavioral red test asserted through the app's
+  PUBLIC SURFACE only (query the rendered DOM; never parse src or assume a style-source shape — impl
+  owns that): stable `data-*` hooks, key interactions, and the DOM-observable a11y subset (skip-link
+  anchor, `aria-sort`, tabular-nums hook, focus behavior, per DESIGN.md §Accessibility). The
+  source-level motion/style discipline (transform/opacity-only, a `prefers-reduced-motion` block) is
+  an `fp-review` src lint, NOT a spec assertion. **RED at freeze** (the feature doesn't exist yet; on a greenfield repo
   it may not even run) — `fp-impl` makes it green and never edits it. It asserts behavior ONLY —
   never pixels, colors, spacing or layout (aesthetics has no oracle; that is the visual gate's job)
   — and only through the app's **public surface** (render the root / visit a route, query `data-*`
@@ -103,7 +105,7 @@ One feature in flight at a time (the human serializes; `current.json` is a singl
   current.json            {repo, branch, pr?, feature, stage, design-rev?, attempts}  # fast pointer (cache — journal tail is authoritative)
   <feature>/
     journal.md            append-only run log — one entry per completed stage
-    DESIGN.md             the frozen design system: palette / typography / spacing / components / motion · §Anti-slop bans · §Accessibility checklist · §Motion discipline
+    DESIGN.md             the frozen design system: palette / typography / spacing / components / motion · §Anti-slop · §Accessibility · §Motion discipline
     tokens.css            CSS variables (the machine-diffable half of the freeze)
     references/           preview.html (regenerable render of the frozen system) + *.png — the visual oracle (pre-ship: captured from preview.html; post-merge: rebaselined to accepted-implementation shots)
     spec/                 frozen behavioral red test (data-* hooks / interactions / a11y hooks / motion-behavior) — red at freeze, impl makes it green
@@ -203,23 +205,31 @@ deterministic checks; any failure ⇒ reject (`attempts++`, route impl):
    frozen file directly (relative path or build alias), OR carries a copy that is **byte-identical**
    (`git diff --no-index .pipeline/<feature>/tokens.css <copy>` empty). The impl handoff names the
    method and the import/copy location — review verifies at that location. A drifted copy ⇒ reject.
-3. **Token adherence.** Src styles must reference `var(--*)` — no raw color literals
-   (hex/`rgb()`/`hsl()`/`oklch()`) in src stylesheets or inline styles. Prefer stylelint
+3. **Token adherence + motion discipline.** Src styles must reference `var(--*)` — no raw color
+   literals (hex/`rgb()`/`hsl()`/`oklch()`) in src stylesheets or inline styles. Prefer stylelint
    (e.g. `color-no-hex` + declaration-strict-value); a grep fallback must be scoped to declaration
    VALUES (`: *#[0-9a-fA-F]` etc.) — ID selectors (`#app`), SVG data and vendored files are not
-   violations; sanity-check every match before rejecting. Violations ⇒ reject.
+   violations; sanity-check every match before rejecting. The same src-lint pass enforces DESIGN.md
+   §Motion discipline — transitions/animations target `transform`/`opacity` only (no
+   top/left/width/height) and a `prefers-reduced-motion` block is present. These are source
+   properties, checked HERE (the built source exists at review), never in the frozen spec. Violations
+   ⇒ reject.
 4. **Design-system lint (contrast — hard gate).** Run `npx @google/design.md lint --format=json
-   <path/DESIGN.md>`. **The tool reports a failing WCAG-AA pair as `severity:"warning"` and exits 0**
-   — so NEVER gate on exit code or error-severity (that lets every real contrast failure pass).
-   Parse `findings[]` and **reject on any finding whose message contains `below WCAG AA`** (the
-   contrast failure) or on `summary.errors > 0` (structural errors, e.g. broken token refs / missing
+   .pipeline/<feature>/DESIGN.md`. **The tool reports a failing WCAG-AA pair as `severity:"warning"`
+   and exits 0** — so NEVER gate on exit code or error-severity (that lets every real contrast
+   failure pass). Parse `findings[]` and **reject on any finding whose message contains
+   `below WCAG AA`** or on `summary.errors > 0` (structural errors, e.g. broken token refs / missing
    required sections); surface other warnings (e.g. `orphaned-tokens`) into the review notes.
-   Contrast's PRIMARY enforcement point is the freeze (`fp-design` refuses to freeze an AA-failing
-   palette) — this re-run is the belt-and-braces check. **Only when a previously shipped feature
-   exists**, additionally run `npx @google/design.md diff <last-shipped-feature/DESIGN.md>
-   <path/DESIGN.md>` as a token-regression triage signal (mirrors the cross-feature pixel signal,
-   feature 2 onward; a missing baseline exits ENOENT, so guard it — never let diff gate the review).
-   Linter unresolvable ⇒ STOP and ask the operator (never silently skip a hard gate).
+   **A design that declares NO component fg/bg pair emits no contrast finding and still exits 0 — an
+   uncheckable palette. So first confirm the DESIGN.md declares pairs (`components.<name>` with both
+   `backgroundColor` and `textColor`); a text-on-surface design with none ⇒ reject (the gate is
+   vacuous otherwise).** Contrast's PRIMARY enforcement point is the freeze (`fp-design` refuses to
+   freeze an AA-failing or pairless palette) — this re-run is the belt-and-braces check. **Only when
+   a previously shipped feature exists**, additionally run `npx @google/design.md diff
+   .pipeline/<shipped-feature>/DESIGN.md .pipeline/<feature>/DESIGN.md` as a token-regression triage
+   signal (`regression: true`; mirrors the cross-feature pixel signal, feature 2 onward; a missing
+   baseline exits ENOENT, so guard it — never let diff gate the review). Linter unresolvable ⇒ STOP
+   and ask the operator (never silently skip a hard gate).
 
 These are the only places in a frontend flow where a real machine oracle exists — use them fully so
 the visual gate spends human attention on aesthetics only.

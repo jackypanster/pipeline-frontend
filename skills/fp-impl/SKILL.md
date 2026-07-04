@@ -36,9 +36,10 @@ Constrain it accordingly.
    - src styles use `var(--*)` — **no raw color literals** (hex/rgb/hsl/oklch); review lints this;
    - the rendered UI matches the frozen design.
    - **honor DESIGN.md's normative §Anti-slop / §Accessibility / §Motion discipline sections** — the
-     spec's a11y + motion-behavior subset (reduced-motion block, transform/opacity-only transitions,
-     `aria-sort` / skip-link / `data-*` hooks) is part of "spec green"; the rest the visual + contrast
-     gates check.
+     spec's DOM-observable subset (`aria-sort` / skip-link anchor / tabular-nums hook / `data-*`
+     interaction hooks) is part of "spec green"; the source-level motion discipline
+     (transform/opacity-only transitions, `prefers-reduced-motion` block) and contrast are re-checked
+     by `fp-review`'s src lint + contrast gate; the rest the visual gate.
    De-hardcode placeholders, wire the real backend/API (base URL from `.env` per CONTRACT step 2).
    Loop think→code→check within the turn budget. Only code lives on the branch; **never touch
    `design-paths` or `spec-paths`** (DESIGN.md / tokens.css / references/ / spec/). A wrong or
@@ -63,9 +64,10 @@ Constrain it accordingly.
 
 - Never touch `design-paths` (`DESIGN.md` / `tokens.css` / `references/`) or `spec-paths`
   (`spec/`) — the freeze gate. Never merge. Only the feature's `src` + build config.
-- Done requires the frozen spec green BY PATH (incl. its a11y + motion-behavior subset) + tokens
-  consumed (import or byte-identical copy) + zero raw color literals in src styles + DESIGN.md's
-  normative sections honored — review re-checks these deterministically (incl. design.md contrast lint).
+- Done requires the frozen spec green BY PATH (incl. its DOM-observable a11y/interaction subset) +
+  tokens consumed (import or byte-identical copy) + zero raw color literals in src styles + DESIGN.md
+  §Motion discipline honored in src (transform/opacity-only, `prefers-reduced-motion` block) — review
+  re-checks these deterministically (src lint + design.md contrast gate).
 - Code lives on `feat/<feature>`; `current.json` stage flips commit to `main` (trunk authority —
   never leave state stranded on the branch). If the frozen design or spec is wrong, do NOT edit it —
   re-route to `fp-design` to re-freeze (the handoff MUST name what to change).

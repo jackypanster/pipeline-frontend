@@ -44,11 +44,18 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
      stylelint; a grep fallback must match declaration VALUES only (ID selectors like `#app`, SVG
      data, vendored files are not violations — sanity-check matches before rejecting). Violations
      ⇒ REJECT.
+   - **Motion discipline (src lint):** transitions/animations in src target `transform`/`opacity`
+     only — no `top`/`left`/`width`/`height` animated — and a `prefers-reduced-motion` block is
+     present (DESIGN.md §Motion discipline). The source shape now exists, so this lives here, not in
+     the frozen spec. Violations ⇒ REJECT.
    - **Design-system lint (contrast — hard):** run `npx @google/design.md lint --format=json
      .pipeline/<feature>/DESIGN.md`. Contrast failures come back as `severity:"warning"` with exit 0,
      so parse `findings[]` and **REJECT on any `below WCAG AA` message** or `summary.errors > 0`
-     (defends against a design frozen before this gate or a linter-version gap). **Only if a
-     previously shipped feature exists**, run `npx @google/design.md diff <shipped/DESIGN.md>
+     (defends against a design frozen before this gate or a linter-version gap). **A pairless design
+     emits no contrast finding and exits 0** — so also confirm the DESIGN.md declares component fg/bg
+     pairs (`components.<name>` with both `backgroundColor` and `textColor`); none on a
+     text-on-surface design ⇒ REJECT (the gate is vacuous otherwise). **Only if a previously shipped
+     feature exists**, run `npx @google/design.md diff .pipeline/<shipped-feature>/DESIGN.md
      .pipeline/<feature>/DESIGN.md` and feed `regression: true` INTO the visual review as triage (a
      signal, never a verdict; skip on feature 1 — a missing baseline exits ENOENT). Linter
      unresolvable ⇒ STOP+human (never skip a hard gate).
