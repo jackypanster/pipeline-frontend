@@ -44,14 +44,16 @@ plus a visual review (render matches the design; skill + human).
 > memory, no scheduler, no DB: a human relays the handoff, any agent rebuilds state from
 > `git pull` alone.
 >
-> **Design-first.** `fp-design` freezes the design system (`DESIGN.md` + `tokens.css` +
+> **Design-first.** `fp-design` freezes the design system (`DESIGN.md` — incl. normative §Anti-slop /
+> §Accessibility / §Motion discipline sections — + `tokens.css` +
 > `references/` — a regenerable `preview.html` + screenshots captured from it) AND a minimal
 > behavioral red test (`spec/*`, red at freeze) to trunk as `design-rev` BEFORE any code. `fp-impl`
 > makes the spec green without touching `design-paths` or `spec-paths`. `fp-review` enforces, in
 > order: staleness (`design-rev` not an ancestor of the branch tip ⇒ route rebase, not a reject);
 > tamper (`git diff $(git merge-base trunk tip) tip -- design-paths spec-paths` non-empty ⇒
 > reject); behavioral + token (frozen spec run by explicit path must be green; frozen `tokens.css`
-> imported or byte-identical copy; no raw color literals in src); AND a visual review comparing the
+> imported or byte-identical copy; no raw color literals in src; `design.md lint` clean — WCAG
+> contrast is a hard gate); AND a visual review comparing the
 > live render against the frozen references (skill + human).
 >
 > **Source of truth is `journal.md`** (append-only; last entry = live position). State machine:
@@ -89,9 +91,10 @@ runs its command. **Check every one; install any missing from its source:**
 
 | delegated skill | used by | source |
 |---|---|---|
-| design-intelligence skill (e.g. `ui-ux-pro-max`) | design | `github.com/nextlevelbuilder/ui-ux-pro-max-skill` — `npx ui-ux-pro-max-cli init --ai claude --global`. Generates a complete design system from a product brief, locally, zero API key. Any skill that produces a frozen `DESIGN.md` + `tokens.css` is a valid slot. |
+| design-system skill (abstract slot — pick by surface, see DESIGN.md) | design | any generator that produces a frozen `DESIGN.md` + `tokens.css` from a brief, locally, zero API key. Install examples exist per runtime — bind the real installed name in `roles.yaml`, never a brand into the contract. |
 | `design`/`ui` (screenshot-iteration visual review) | review | your runtime's taste-engine skill — compares a live render against references and names concrete visual deltas |
 | `<autonomous-coding-skill>` (impl slot) | impl | your runtime's autonomous think→code→check skill |
+| `@google/design.md` (contrast hard gate) | design + review | `npx @google/design.md` — WCAG `contrast-ratio` lint + token-level `diff`. One-time network install; runs offline after. Required (a hard gate STOPs if it can't resolve). |
 
 **Check procedure:** for each skill, confirm it loads on the runtime. Missing ⇒ install from its
 source into that runtime's skill dir ⇒ re-check. **Cross-runtime trap:** a skill installed for one

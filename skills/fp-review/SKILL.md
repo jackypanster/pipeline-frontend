@@ -1,6 +1,6 @@
 ---
 name: fp-review
-description: "Frontend pipeline stage 3 — review the implementation against the frozen design and merge. Runs staleness routing, the tamper gate (design/spec-paths untouched on the branch), the behavioral+token gate (frozen spec green, tokens consumed, no raw colors) AND the visual gate (render matches design), then merges after human confirm and rebaselines references. The ONLY stage that merges. Use after fp-impl. Args: repo, branch, pr."
+description: "Frontend pipeline stage 3 — review the implementation against the frozen design and merge. Runs staleness routing, the tamper gate (design/spec-paths untouched on the branch), the behavioral+token gate (frozen spec green, tokens consumed, no raw colors, WCAG contrast lint) AND the visual gate (render matches design), then merges after human confirm and rebaselines references. The ONLY stage that merges. Use after fp-impl. Args: repo, branch, pr."
 ---
 
 # fp-review
@@ -30,8 +30,9 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
      feature back (journal `status=failed`, route to `fp-impl`; or STOP+human at `attempts >= 3`).
      Write `reviews/review-NN.md` naming exactly what changed and that it must be reverted /
      re-frozen via `fp-design` if the change is intentional.
-5. **GATE 3 — behavioral + token gate** (deterministic; CONTRACT §Behavioral & token gate). Run all
-   three yourself — never trust impl's self-report:
+5. **GATE 3 — behavioral + token gate** (deterministic; CONTRACT §Behavioral & token gate). Run
+   EVERY check below yourself — never trust impl's self-report (the list mirrors CONTRACT's four
+   checks; a count would go stale, so run all of them, not a number):
    - **Spec green:** run the frozen spec **by explicit path, with the literal command the impl
      handoff names** — the runner is impl's build-config choice; guessing one false-rejects a
      correct impl. Never the repo's default test glob (impl owns build config and could exclude
@@ -40,10 +41,24 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
    - **Tokens consumed:** src imports the frozen `tokens.css`, or carries a byte-identical copy
      (`git diff --no-index .pipeline/<feature>/tokens.css <copy>` empty) — the impl handoff names
      the method + location; verify there. Drifted copy ⇒ REJECT.
-   - **Token adherence:** no raw color literals (hex/rgb/hsl/oklch) in src styles — prefer
-     stylelint; a grep fallback must match declaration VALUES only (ID selectors like `#app`, SVG
-     data, vendored files are not violations — sanity-check matches before rejecting). Violations
-     ⇒ REJECT.
+   - **Token adherence + motion discipline (src lint):** src styles reference `var(--*)` — no raw
+     color literals (hex/rgb/hsl/oklch); prefer stylelint, a grep fallback matching declaration
+     VALUES only (ID selectors like `#app`, SVG data, vendored files are not violations —
+     sanity-check matches first). The SAME src-lint pass enforces DESIGN.md §Motion discipline:
+     transitions/animations target `transform`/`opacity` only (no `top`/`left`/`width`/`height`) and a
+     `prefers-reduced-motion` block is present. Both are source properties, checked HERE (the built
+     source exists), not in the frozen spec. Violations ⇒ REJECT.
+   - **Design-system lint (contrast — hard):** run `npx @google/design.md lint --format=json
+     .pipeline/<feature>/DESIGN.md`. Contrast failures come back as `severity:"warning"` with exit 0,
+     so parse `findings[]` and **REJECT on any `below WCAG AA` message** or `summary.errors > 0`
+     (defends against a design frozen before this gate or a linter-version gap). **A pairless design
+     emits no contrast finding and exits 0** — so also confirm the DESIGN.md declares component fg/bg
+     pairs (`components.<name>` with both `backgroundColor` and `textColor`); none on a
+     text-on-surface design ⇒ REJECT (the gate is vacuous otherwise). **Only if a previously shipped
+     feature exists**, run `npx @google/design.md diff .pipeline/<shipped-feature>/DESIGN.md
+     .pipeline/<feature>/DESIGN.md` and feed `regression: true` INTO the visual review as triage (a
+     signal, never a verdict; skip on feature 1 — a missing baseline exits ENOENT). Linter
+     unresolvable ⇒ STOP+human (never skip a hard gate).
    Any REJECT here: `attempts++`, journal `status=failed`, route `fp-impl` (or STOP+human at ≥3),
    findings in `reviews/review-NN.md`.
 6. **GATE 4 — visual gate** (CONTRACT §Visual gate):
@@ -78,9 +93,12 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
 ## Hard rules
 
 - All gates mandatory, in order: staleness (route rebase, not a reject) → tamper diff over
-  `design-paths` + `spec-paths` (non-empty ⇒ reject) → behavioral+token (spec green by path, tokens
-  consumed, no raw colors — run them yourself) → visual review (deviations ⇒ reject). None alone is
-  sufficient.
+  `design-paths` + `spec-paths` (non-empty ⇒ reject) → behavioral+token (spec green by path incl. the
+  DOM-observable a11y/interaction subset, tokens consumed, no raw colors, motion source-discipline
+  src lint, design.md lint clean / WCAG contrast — run every one yourself) → visual review
+  (deviations ⇒ reject). None alone is sufficient. Motion is judged by its interaction hooks (spec)
+  AND its source discipline (src lint: transform/opacity-only, `prefers-reduced-motion`); only motion
+  AESTHETICS stays with the static-screenshot visual gate (scripted-interaction review deferred).
 - Only `fp-review` merges, only after explicit human confirm. Never force-push trunk. Review writes
   only `reviews/*` + `references/*.png` (post-merge rebaseline ONLY) + `current.json`/`journal.md`
   metadata — never product code.

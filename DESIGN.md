@@ -21,8 +21,8 @@ the gate has four mandatory layers:
 |---|---|---|---|
 | staleness | branch carries the current freeze | machine | `design-rev` not ancestor of review-tip ⇒ route rebase (NOT a reject, attempts unchanged) |
 | tamper | frozen paths untouched ON the branch | machine | `git diff $(git merge-base trunk tip) tip -- design-paths spec-paths` non-empty ⇒ reject |
-| behavioral + token | spec green (run by path) · tokens.css consumed (import or byte-identical copy) · no raw color literals in src | machine | any failure ⇒ reject |
-| visual | rendered UI matches the design | skill + human | `design`/`ui` skill screenshot-iteration + human confirm; post-rebaseline pixel diff as triage signal |
+| behavioral + token | spec green (run by path, incl. the a11y + motion-behavior subset) · tokens.css consumed (import or byte-identical copy) · no raw color literals in src · design.md lint clean (WCAG contrast — hard) | machine | any failure ⇒ reject |
+| visual | rendered UI matches the design | skill + human | `design`/`ui` skill screenshot-iteration + human confirm; post-rebaseline pixel diff as triage signal (still static screenshots — motion review deferred) |
 
 All must pass. The tamper half is a NEGATIVE check — untouched frozen files prove nothing about the
 code (fake-green trap); the behavioral/token layer is the deterministic POSITIVE check; the visual
@@ -64,7 +64,7 @@ your briefing.
 
 ```yaml
 # .pipeline/roles.yaml  (one per target repo; any line independently swappable to a best-of-breed skill)
-design:  ui-ux-pro-max             # generates a complete design system (palette/type/spacing/components) from a product brief
+design:  <design-system-skill>     # abstract slot — your installed design-system generator (pick by surface, see below)
 impl:    <autonomous-coding-skill> # your runtime's real installed think→code→check skill
 review:  design                    # the local design/ui skill's screenshot-iteration mode (visual review vs frozen refs)
 ```
@@ -74,13 +74,33 @@ each command verifies its OWN slot resolves to an installed skill (hard gate —
 failure). **Brand names are install examples only** — never copy a specific tool name into the
 onboarding snippet or the contract.
 
+### Choosing the design slot (per surface — non-binding)
+
+The `design` slot only picks the **aesthetic direction**. The four frontend quality axes — visual
+character, anti-slop discipline, a11y/engineering rigor, motion craft — are not all won by any single
+generator, so three of them are guaranteed by the **frozen DESIGN.md template**: `fp-design` writes
+mandatory §Anti-slop + §Accessibility + §Motion discipline sections regardless of which skill filled
+the slot. That leaves only the aesthetic direction to choose per surface:
+
+| surface | slot choice | why |
+|---|---|---|
+| landing / portfolio / marketing | high-variance anti-slop or visual-adventure generator + an explicit cross-page-consistency constraint | reward visual risk; adventure generators drift across pages, so pin consistency |
+| dashboard / back-office / data-dense | a11y-first or low-variance generator | a system meant to be frozen and followed wants discipline and a11y, not per-page adventure |
+
+Never bind a brand name into the slot; the DESIGN.md template — not the generator — is what makes the
+output cover all four axes.
+
 ## Borrowed / rejected
 
 **Borrowed:** the ~20-line shim shape; `journal.md` as authoritative tail; the handoff block; the
 state machine; the forge adapter; propose-only self-improvement; the `DESIGN.md` scaffold standard
 (open-sourced by Google Stitch, from `getdesign.md`); three-layer design-token architecture
 (primitive→semantic→component); the general pipeline's ADR-005 hybrid — freeze behavior as a
-headless red test (`data-*` hooks), leave aesthetics to skill+human review.
+headless red test (`data-*` hooks), leave aesthetics to skill+human review; the negative-constraint
+method (bake banned defaults into the frozen contract, not positive adjectives); a normative
+accessibility checklist (skip-link / focus-trap / aria-sort / tabular-nums / reduced-motion) and a
+motion-discipline rule (animate transform/opacity only) as frozen DESIGN.md sections; Google
+design.md `lint` (WCAG contrast as a deterministic gate) + `diff` (token-level regression).
 **Rejected:** an AESTHETIC red-test gate (wrong domain — aesthetics has no deterministic oracle;
 the BEHAVIORAL red test is kept — behavior does have one); binding a
 specific design-generation tool into the contract (Stitch / OpenDesign / Gemini AI Studio / Claude
@@ -89,7 +109,9 @@ autonomous pass/fail oracle (adopted only as a post-rebaseline triage SIGNAL fee
 review — DiffSpot, arxiv 2605.29615, shows VLM-only review misses fine-grained drift, so the
 signal is warranted; auto-verdicts on pixels stay rejected as brittle); a mandatory online
 design-tool stage (fails closed offline — the local `design_system` script generates
-deterministically with zero network, so the MVP runs air-gapped).
+deterministically with zero network, so the MVP GENERATION runs air-gapped; the one network touch is
+a one-time install of the `@google/design.md` linter that powers the contrast gate — after install it
+runs offline, and generation never needs it).
 
 ## Constraints
 
