@@ -1,6 +1,6 @@
 ---
 name: fp-review
-description: "Frontend pipeline stage 3 — review the implementation against the frozen design and merge. Runs staleness routing, the tamper gate (design/spec-paths untouched on the branch), the behavioral+token gate (frozen spec green, tokens consumed, no raw colors) AND the visual gate (render matches design), then merges after human confirm and rebaselines references. The ONLY stage that merges. Use after fp-impl. Args: repo, branch, pr."
+description: "Frontend pipeline stage 3 — review the implementation against the frozen design and merge. Runs staleness routing, the tamper gate (design/spec-paths untouched on the branch), the behavioral+token gate (frozen spec green, tokens consumed, no raw colors, WCAG contrast lint) AND the visual gate (render matches design), then merges after human confirm and rebaselines references. The ONLY stage that merges. Use after fp-impl. Args: repo, branch, pr."
 ---
 
 # fp-review
@@ -31,7 +31,7 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
      Write `reviews/review-NN.md` naming exactly what changed and that it must be reverted /
      re-frozen via `fp-design` if the change is intentional.
 5. **GATE 3 — behavioral + token gate** (deterministic; CONTRACT §Behavioral & token gate). Run all
-   three yourself — never trust impl's self-report:
+   four yourself — never trust impl's self-report:
    - **Spec green:** run the frozen spec **by explicit path, with the literal command the impl
      handoff names** — the runner is impl's build-config choice; guessing one false-rejects a
      correct impl. Never the repo's default test glob (impl owns build config and could exclude
