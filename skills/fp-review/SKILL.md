@@ -44,6 +44,12 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
      stylelint; a grep fallback must match declaration VALUES only (ID selectors like `#app`, SVG
      data, vendored files are not violations — sanity-check matches before rejecting). Violations
      ⇒ REJECT.
+   - **Design-system lint (contrast — hard):** re-run `npx @google/design.md lint
+     .pipeline/<feature>/DESIGN.md`; any WCAG-AA `contrast-ratio` error / `broken-ref` /
+     `orphaned-tokens` ⇒ REJECT (defends against a design frozen before this gate or a linter-version
+     gap). Then run `npx @google/design.md diff <last-shipped-feature/DESIGN.md>
+     .pipeline/<feature>/DESIGN.md` and feed any `regression: true` INTO the visual review as triage
+     (a signal, never an auto verdict). Linter unresolvable ⇒ STOP+human (never skip a hard gate).
    Any REJECT here: `attempts++`, journal `status=failed`, route `fp-impl` (or STOP+human at ≥3),
    findings in `reviews/review-NN.md`.
 6. **GATE 4 — visual gate** (CONTRACT §Visual gate):
@@ -78,9 +84,11 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
 ## Hard rules
 
 - All gates mandatory, in order: staleness (route rebase, not a reject) → tamper diff over
-  `design-paths` + `spec-paths` (non-empty ⇒ reject) → behavioral+token (spec green by path, tokens
-  consumed, no raw colors — run them yourself) → visual review (deviations ⇒ reject). None alone is
-  sufficient.
+  `design-paths` + `spec-paths` (non-empty ⇒ reject) → behavioral+token (spec green by path incl. the
+  a11y + motion-behavior subset, tokens consumed, no raw colors, design.md lint clean / WCAG contrast
+  — run them yourself) → visual review (deviations ⇒ reject). None alone is sufficient. The visual
+  gate stays static-screenshot review — motion is judged only via the frozen spec's behavior subset
+  (motion review by scripted interaction is deferred).
 - Only `fp-review` merges, only after explicit human confirm. Never force-push trunk. Review writes
   only `reviews/*` + `references/*.png` (post-merge rebaseline ONLY) + `current.json`/`journal.md`
   metadata — never product code.

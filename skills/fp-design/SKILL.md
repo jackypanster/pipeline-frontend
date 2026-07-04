@@ -28,7 +28,23 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
 4. **Write the frozen design system** to `.pipeline/<feature>/`:
    - `DESIGN.md` — the human-readable design system: visual thesis, palette, typography, spacing,
      components, layout, depth, do/don't, responsive breakpoints, motion. (The `design`/`ui` skill's
-     9-section DESIGN.md scaffold is the canonical shape.)
+     9-section DESIGN.md scaffold is the canonical shape.) **Regardless of which skill filled the
+     slot, the DESIGN.md YOU freeze MUST additionally carry three NORMATIVE sections — bans and
+     checklists only, never positive how-to (positive templates limit the generator; bans do not):**
+     - **§Anti-slop** — banned defaults: Inter (use Geist/Outfit/Cabinet Grotesk/Satoshi or a
+       brief-specific pairing), purple/indigo gradients, centered-hero + three-equal-column cards,
+       section-number eyebrows, em-dash, decorative version/status pills and fake product UI, lazy
+       `divide-y` long lists.
+     - **§Accessibility** — required: skip-link, `:focus-visible` + focus-trap on modals, `aria-sort`
+       on sortable tables, `tabular-nums` on numeric columns, `prefers-reduced-motion` honored,
+       semantic landmarks + labels.
+     - **§Motion discipline** — transitions animate **transform/opacity ONLY** (never
+       top/left/width/height); a `prefers-reduced-motion` media query is mandatory; every named
+       interaction motion (e.g. invalid→shake, interruptible toggle, fast-out/slow-in toast) carries
+       a `data-*` hook.
+     Declare foreground/background color PAIRINGS in the design.md component-entry form so
+     `design.md lint` can compute contrast (no declared pairs ⇒ zero contrast findings ⇒ the hard
+     gate silently passes — see step 5).
    - `tokens.css` — CSS variables (`--color-primary`, `--spacing-*`, `--font-*`, ...). This is the
      **machine-diffable half** of the freeze — it MUST be valid CSS (**verify by parsing** —
      stylelint or any CSS parser, never by eyeball) and internally consistent with DESIGN.md.
@@ -40,7 +56,12 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      desktop + one 375px-mobile capture. These are the **visual oracle** `fp-review` compares the
      live render against, pre-ship.
    - `spec/*` — a minimal headless **behavioral red test** (CONTRACT §What this freezes): stable
-     `data-*` hooks per screen/component, key interactions, basic a11y. YOU (the fp-design agent)
+     `data-*` hooks per screen/component, key interactions, and the deterministic a11y + motion
+     subset (behavior/structure ONLY, never pixels): a `@media (prefers-reduced-motion)` block
+     exists; no src transition/animation targets top/left/width/height (parse the static CSS); each
+     named interaction's `data-*` hook toggles (e.g. bad input ⇒ `[data-invalid]`); a skip-link
+     anchor exists; sortable tables carry `aria-sort`; numeric cells carry the tabular-nums hook.
+     YOU (the fp-design agent)
      author it — the design skill only does the design system; spec author ≠ implementer. It is
      RED now (the feature doesn't exist); `fp-impl` makes it green. Assert behavior ONLY — never
      pixels, colors, spacing or layout. Assert through the app's **public surface** only: render
@@ -49,6 +70,12 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      to contort `src` around your guesses or loop back here (the likeliest self-inflicted
      deadlock).
 5. **Freeze in two ordered commits** (CONTRACT §Freeze gate):
+   - **Contrast hard gate (before freezing)** — run `npx @google/design.md lint
+     .pipeline/<feature>/DESIGN.md`. Any WCAG-AA `contrast-ratio` error / `broken-ref` /
+     `orphaned-tokens` ⇒ **STOP, fix the palette/tokens, do NOT freeze**. Also assert the lint output
+     actually CONTAINS contrast checks (non-zero) — zero means the fg/bg pairings weren't declared
+     and the gate is fake; fix the DESIGN.md pairings and re-run. Linter unresolvable ⇒ STOP and ask
+     the operator (never freeze past an unrun hard gate).
    - **Freeze commit** — `git add DESIGN.md tokens.css references/ spec/`, commit. Record its hash
      as **`design-rev`**.
    - **Record commit** — set `current.json` `{stage: design, design-rev: <hash>}`, append your
@@ -67,6 +94,9 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
 - `tokens.css` MUST parse as valid CSS (verified, not eyeballed) and be consistent with `DESIGN.md`.
   `references/` MUST exist and its `*.png` MUST be captured from the frozen `preview.html` (the
   visual gate has no honest oracle otherwise).
+- `DESIGN.md` MUST carry the three normative sections (§Anti-slop / §Accessibility / §Motion
+  discipline — bans and checklists only, no positive how-to) and MUST pass `design.md lint` (WCAG
+  contrast — hard) with a non-zero contrast-check count BEFORE freezing (step 5).
 - `spec/` MUST exist and MUST NOT pass at freeze: where a runner exists, run it and confirm red;
   on a greenfield repo with no runner yet, unrunnable is acceptable and expected. A spec that
   PASSES with no implementation is broken — fix it before freezing. It asserts behavior (`data-*`

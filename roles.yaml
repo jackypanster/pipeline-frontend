@@ -4,9 +4,19 @@
 # pipeline is framework-, machine- and LLM-agnostic — not bound to any tool, framework, agent or LLM.
 # Per-stage model requirement: design/review want a frontier SOTA model; impl tolerates a capable local model.
 
-design:  ui-ux-pro-max             # generates a complete design system (palette/type/spacing/components) from a product brief
+design:  <design-system-skill>     # REQUIRED: your installed design-system generator (abstract slot — pick by surface, table below)
 impl:    <autonomous-coding-skill> # REQUIRED: set to the real installed name of your runtime's autonomous think→code→check skill
 review:  design                    # the local design/ui skill's screenshot-iteration mode (visual review vs frozen references)
+
+# Choosing the design slot (per surface — non-binding). The four frontend quality axes
+# (visual character / anti-slop / a11y / motion) are NOT all won by one generator, so three of them
+# are guaranteed by the frozen DESIGN.md template (fp-design writes mandatory §Anti-slop +
+# §Accessibility + §Motion discipline sections regardless of which skill fills this slot). The slot
+# therefore only picks the AESTHETIC DIRECTION:
+#   landing / portfolio / marketing      → high-variance anti-slop or visual-adventure generator,
+#                                           ADD a cross-page-consistency constraint (adventure drifts across pages)
+#   dashboard / back-office / data-dense → a11y-first or low-variance generator (data restraint > visual risk)
+# Never bind a brand name here — this stays an abstract slot (CONTRACT §Self-improvement / DESIGN.md).
 
 # Extend with new verbs as needed, e.g.:
 # task:  think                     # decompose a large design into atomic impl cards (deferred — MVP freezes one unit per feature)
