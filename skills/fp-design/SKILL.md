@@ -70,12 +70,14 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      to contort `src` around your guesses or loop back here (the likeliest self-inflicted
      deadlock).
 5. **Freeze in two ordered commits** (CONTRACT §Freeze gate):
-   - **Contrast hard gate (before freezing)** — run `npx @google/design.md lint
-     .pipeline/<feature>/DESIGN.md`. Any WCAG-AA `contrast-ratio` error / `broken-ref` /
-     `orphaned-tokens` ⇒ **STOP, fix the palette/tokens, do NOT freeze**. Also assert the lint output
-     actually CONTAINS contrast checks (non-zero) — zero means the fg/bg pairings weren't declared
-     and the gate is fake; fix the DESIGN.md pairings and re-run. Linter unresolvable ⇒ STOP and ask
-     the operator (never freeze past an unrun hard gate).
+   - **Contrast hard gate (before freezing)** — run `npx @google/design.md lint --format=json
+     .pipeline/<feature>/DESIGN.md`. **The tool emits a failing AA pair as `severity:"warning"` and
+     exits 0**, so DON'T trust exit code/severity: parse `findings[]` and **STOP if any message
+     contains `below WCAG AA`** or `summary.errors > 0` — fix the palette/tokens, do NOT freeze. The
+     check is only real if the DESIGN.md declares component fg/bg pairs (`components.<name>` with both
+     `backgroundColor` and `textColor`) — the lint output carries NO pair count, so verify the pairs
+     by READING the DESIGN.md; a text-on-surface design with none declared is incomplete, fix before
+     freezing. Linter unresolvable ⇒ STOP and ask the operator (never freeze past an unrun hard gate).
    - **Freeze commit** — `git add DESIGN.md tokens.css references/ spec/`, commit. Record its hash
      as **`design-rev`**.
    - **Record commit** — set `current.json` `{stage: design, design-rev: <hash>}`, append your
@@ -95,8 +97,10 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
   `references/` MUST exist and its `*.png` MUST be captured from the frozen `preview.html` (the
   visual gate has no honest oracle otherwise).
 - `DESIGN.md` MUST carry the three normative sections (§Anti-slop / §Accessibility / §Motion
-  discipline — bans and checklists only, no positive how-to) and MUST pass `design.md lint` (WCAG
-  contrast — hard) with a non-zero contrast-check count BEFORE freezing (step 5).
+  discipline — bans and checklists only, no positive how-to), MUST declare component fg/bg pairs so
+  contrast is actually checked, and MUST pass `design.md lint` (no `below WCAG AA` finding, no
+  structural errors — contrast is emitted as a `warning` with exit 0, so gate on the message, never
+  the exit code) BEFORE freezing (step 5).
 - `spec/` MUST exist and MUST NOT pass at freeze: where a runner exists, run it and confirm red;
   on a greenfield repo with no runner yet, unrunnable is acceptable and expected. A spec that
   PASSES with no implementation is broken — fix it before freezing. It asserts behavior (`data-*`

@@ -208,15 +208,18 @@ deterministic checks; any failure ⇒ reject (`attempts++`, route impl):
    (e.g. `color-no-hex` + declaration-strict-value); a grep fallback must be scoped to declaration
    VALUES (`: *#[0-9a-fA-F]` etc.) — ID selectors (`#app`), SVG data and vendored files are not
    violations; sanity-check every match before rejecting. Violations ⇒ reject.
-4. **Design-system lint (contrast — hard gate).** Re-run `npx @google/design.md lint
-   <path/DESIGN.md>` on the frozen design system. Any WCAG-AA `contrast-ratio` error, `broken-ref`,
-   or `orphaned-tokens` at error severity ⇒ **reject**. Contrast's PRIMARY enforcement point is the
-   freeze (`fp-design` refuses to freeze an AA-failing palette) — this re-run is the belt-and-braces
-   check against a design frozen before this gate existed or a linter-version gap. Additionally run
-   `npx @google/design.md diff <last-shipped-feature/DESIGN.md> <path/DESIGN.md>` and feed any
-   token-level regression (`regression: true`) INTO the visual review as triage (mirrors the
-   cross-feature pixel signal; a signal, never an auto pass/fail). The linter needs a one-time
-   install; if it is not resolvable ⇒ STOP and ask the operator (never silently skip a hard gate).
+4. **Design-system lint (contrast — hard gate).** Run `npx @google/design.md lint --format=json
+   <path/DESIGN.md>`. **The tool reports a failing WCAG-AA pair as `severity:"warning"` and exits 0**
+   — so NEVER gate on exit code or error-severity (that lets every real contrast failure pass).
+   Parse `findings[]` and **reject on any finding whose message contains `below WCAG AA`** (the
+   contrast failure) or on `summary.errors > 0` (structural errors, e.g. broken token refs / missing
+   required sections); surface other warnings (e.g. `orphaned-tokens`) into the review notes.
+   Contrast's PRIMARY enforcement point is the freeze (`fp-design` refuses to freeze an AA-failing
+   palette) — this re-run is the belt-and-braces check. **Only when a previously shipped feature
+   exists**, additionally run `npx @google/design.md diff <last-shipped-feature/DESIGN.md>
+   <path/DESIGN.md>` as a token-regression triage signal (mirrors the cross-feature pixel signal,
+   feature 2 onward; a missing baseline exits ENOENT, so guard it — never let diff gate the review).
+   Linter unresolvable ⇒ STOP and ask the operator (never silently skip a hard gate).
 
 These are the only places in a frontend flow where a real machine oracle exists — use them fully so
 the visual gate spends human attention on aesthetics only.

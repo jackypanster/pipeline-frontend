@@ -44,12 +44,14 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
      stylelint; a grep fallback must match declaration VALUES only (ID selectors like `#app`, SVG
      data, vendored files are not violations — sanity-check matches before rejecting). Violations
      ⇒ REJECT.
-   - **Design-system lint (contrast — hard):** re-run `npx @google/design.md lint
-     .pipeline/<feature>/DESIGN.md`; any WCAG-AA `contrast-ratio` error / `broken-ref` /
-     `orphaned-tokens` ⇒ REJECT (defends against a design frozen before this gate or a linter-version
-     gap). Then run `npx @google/design.md diff <last-shipped-feature/DESIGN.md>
-     .pipeline/<feature>/DESIGN.md` and feed any `regression: true` INTO the visual review as triage
-     (a signal, never an auto verdict). Linter unresolvable ⇒ STOP+human (never skip a hard gate).
+   - **Design-system lint (contrast — hard):** run `npx @google/design.md lint --format=json
+     .pipeline/<feature>/DESIGN.md`. Contrast failures come back as `severity:"warning"` with exit 0,
+     so parse `findings[]` and **REJECT on any `below WCAG AA` message** or `summary.errors > 0`
+     (defends against a design frozen before this gate or a linter-version gap). **Only if a
+     previously shipped feature exists**, run `npx @google/design.md diff <shipped/DESIGN.md>
+     .pipeline/<feature>/DESIGN.md` and feed `regression: true` INTO the visual review as triage (a
+     signal, never a verdict; skip on feature 1 — a missing baseline exits ENOENT). Linter
+     unresolvable ⇒ STOP+human (never skip a hard gate).
    Any REJECT here: `attempts++`, journal `status=failed`, route `fp-impl` (or STOP+human at ≥3),
    findings in `reviews/review-NN.md`.
 6. **GATE 4 — visual gate** (CONTRACT §Visual gate):
