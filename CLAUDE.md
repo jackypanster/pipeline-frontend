@@ -10,12 +10,19 @@ bans / checklists / gates, never human narrative.
   trunk (`CONTRACT.md §Self-improvement`, §State machine).
 
 ## Design decisions of record
+- **Target scope (the default surface).** This pipeline builds web frontends for backend services
+  (REST / APIs / CLIs) — mostly dashboards, admin panels, dev/ops consoles: data-dense,
+  **desktop-primary but responsive** down to tablet/phone, cross-project, cross-platform (Mac/Linux).
+  It's a default assumption, not a hard wall — a feature may narrow it in its own DESIGN.md. See
+  `DESIGN.md §Constraints`.
 - **The design skill is a swappable slot, not a bound tool.** `roles.yaml` `design:` is the abstract
   `<design-system-skill>` placeholder + a per-surface heuristic — never a brand name
   (`DESIGN.md §Choosing the design slot`). Rationale: a public 5-skill community benchmark
   (frontend-design / web-design-guidelines / ui-ux-pro-max / taste-skill / emil-design-eng) showed no
   single generator wins all four quality axes (visual character / anti-slop / a11y / motion), and the
-  weakest one had been the canonical default.
+  weakest one had been the canonical default. Given the scope above, the **common** surface is
+  data-dense/back-office, so the **working default is a11y-first / low-variance** — taste-skill-class
+  generators self-de-scope dashboards/data-tables and fit only the rare landing/marketing surface.
 - **Three of the four axes are baked into the frozen DESIGN.md template, not the slot.** `fp-design`
   authors normative `§Anti-slop` (bans), `§Accessibility` (checklist), `§Motion discipline` — so they
   hold regardless of which generator fills the slot. Only the aesthetic direction is a per-feature

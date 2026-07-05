@@ -84,8 +84,8 @@ the slot. That leaves only the aesthetic direction to choose per surface:
 
 | surface | slot choice | why |
 |---|---|---|
-| landing / portfolio / marketing | high-variance anti-slop or visual-adventure generator + an explicit cross-page-consistency constraint | reward visual risk; adventure generators drift across pages, so pin consistency |
-| dashboard / back-office / data-dense | a11y-first or low-variance generator | a system meant to be frozen and followed wants discipline and a11y, not per-page adventure |
+| **dashboard / back-office / data-dense — the COMMON case** (this pipeline mostly builds API/CLI/backend frontends) | a11y-first or low-variance generator (**the working default**) | a system meant to be frozen and followed wants discipline, a11y, and responsive data-dense layouts (tables that reflow), not per-page adventure. taste-skill-class generators self-de-scope dashboards/data-tables — don't default to them here |
+| landing / portfolio / marketing — the RARE case here | high-variance anti-slop or visual-adventure generator + an explicit cross-page-consistency constraint | reward visual risk; adventure generators drift across pages, so pin consistency |
 
 Never bind a brand name into the slot; the DESIGN.md template — not the generator — is what makes the
 output cover all four axes.
@@ -114,6 +114,12 @@ a one-time install of the `@google/design.md` linter that powers the contrast ga
 runs offline, and generation never needs it).
 
 ## Constraints
+
+**Target scope (default assumption, not a hard wall — a feature may narrow it in its own DESIGN.md):**
+web frontends for backend services (REST / other APIs / CLIs) · cross-project · cross-platform
+(Mac + Linux) · **desktop-primary but responsive/adaptive** down to tablet & phone (not desktop-only).
+Consequence: the common surface is data-dense / back-office, so a11y (tabular-nums, aria-sort, focus
+management) and responsive data-dense layouts are central, not decorative.
 
 No cron, no scheduler (human relays) · not coupled to any machine · LLM-agnostic (design/review
 want a frontier model; impl tolerates a capable local LLM) · commands are extensible — a new verb

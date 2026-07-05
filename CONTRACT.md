@@ -238,8 +238,12 @@ the visual gate spends human attention on aesthetics only.
 
 After the deterministic gates pass, `fp-review` runs the **visual review**:
 
-1. Build/run the feature branch. Capture real screenshots of the implemented UI at desktop width
-   **and** 375px mobile (and any breakpoint the design specifies).
+1. Build/run the feature branch. Capture real screenshots at **desktop** (the primary target and the
+   aesthetic judgment) **and** each responsive breakpoint DESIGN.md declares (default a phone width
+   ~375px, plus a tablet width ~768px if declared). Small-screen shots judge **adaptive correctness**
+   (no overflow / clipping; content and actions reachable) — NOT pixel-parity across widths, and not
+   aesthetics (judged at desktop). Responsive is the norm here (desktop-primary, adapts down); a
+   desktop-only design must say so explicitly in DESIGN.md, else small-screen breakage is a reject.
 2. Invoke the **`design`/`ui` skill** in screenshot-iteration mode: compare the live render against
    the frozen `references/*.png` + the rules in `DESIGN.md`/`tokens.css`. Name concrete visual
    deltas (color drift, spacing, typography, hierarchy, responsive breakage) — never vague "make it
