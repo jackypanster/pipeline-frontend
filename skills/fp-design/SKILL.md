@@ -27,7 +27,9 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      *specific* direction, not a generic "clean modern" default.
 4. **Write the frozen design system** to `.pipeline/<feature>/`:
    - `DESIGN.md` — the human-readable design system: visual thesis, palette, typography, spacing,
-     components, layout, depth, do/don't, responsive breakpoints, motion. (The `design`/`ui` skill's
+     components, layout, depth, do/don't, responsive breakpoints (desktop-primary, adaptive DOWN to
+     tablet & phone is the DEFAULT — declare the breakpoints and how data-dense components like tables
+     / toolbars / nav reflow; a desktop-only design must say so explicitly), motion. (The `design`/`ui` skill's
      9-section DESIGN.md scaffold is the canonical shape.) **Regardless of which skill filled the
      slot, the DESIGN.md YOU freeze MUST additionally carry three NORMATIVE sections — bans and
      checklists only, never positive how-to (positive templates limit the generator; bans do not):**
@@ -53,8 +55,9 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
      and diffable — this is where the reference shots come from.
    - `references/*.png` — screenshots **captured from preview.html** (never hand-picked mockups —
      an implementation can't pixel-match an unachievable mockup and review deadlocks). At least one
-     desktop + one 375px-mobile capture. These are the **visual oracle** `fp-review` compares the
-     live render against, pre-ship.
+     **desktop** capture (the primary target) plus one per responsive breakpoint DESIGN.md declares
+     (default a phone width; add tablet if declared). These are the **visual oracle** `fp-review`
+     compares the live render against, pre-ship.
    - `spec/*` — a minimal headless **behavioral red test** (CONTRACT §What this freezes): stable
      `data-*` hooks per screen/component, key interactions, and the deterministic a11y + interaction
      subset — **assert through the rendered PUBLIC SURFACE only** (query the DOM; never parse src

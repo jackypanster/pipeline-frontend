@@ -62,8 +62,11 @@ visual deltas. It REASONS; the shim owns the gate, merge, and handoff.
    Any REJECT here: `attempts++`, journal `status=failed`, route `fp-impl` (or STOP+human at ≥3),
    findings in `reviews/review-NN.md`.
 6. **GATE 4 — visual gate** (CONTRACT §Visual gate):
-   - Build/run `feat/<feature>`. Capture real screenshots at desktop width **and** 375px mobile (and
-     any breakpoint `DESIGN.md` specifies).
+   - Build/run `feat/<feature>`. Capture real screenshots at **desktop** (primary — the aesthetic
+     judgment) **and** each responsive breakpoint `DESIGN.md` declares (default phone ~375px, plus
+     tablet ~768px if declared). Small-screen shots judge **adaptive correctness** (no overflow /
+     clipping, content + actions reachable), not pixel-parity or aesthetics. Responsive is the norm
+     (desktop-primary, adapts down); only a DESIGN.md that explicitly declares desktop-only is exempt.
    - Invoke the **`design`/`ui` skill** in screenshot-iteration mode: compare the live render
      against the frozen `references/*.png` + the rules in `DESIGN.md`/`tokens.css`. Name concrete
      visual deltas (color drift, spacing, typography, hierarchy, responsive breakage) — never vague
