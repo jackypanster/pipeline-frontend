@@ -38,7 +38,8 @@ and GENERATES; the shim owns the freeze commits, journal, and handoff.
        section-number eyebrows, em-dash, decorative version/status pills and fake product UI, lazy
        `divide-y` long lists.
      - **§Accessibility** — required: skip-link, `:focus-visible` + focus-trap on modals, `aria-sort`
-       on sortable tables, `tabular-nums` on numeric columns, `prefers-reduced-motion` honored,
+       on sortable tables, `tabular-nums` on numeric columns, form errors linked via
+       `aria-describedby` + `aria-invalid` on invalid fields, `prefers-reduced-motion` honored,
        semantic landmarks + labels.
      - **§Motion discipline** — transitions animate **transform/opacity ONLY** (never
        top/left/width/height); a `prefers-reduced-motion` media query is mandatory; every named
